@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雪狼男孩｜MISSION — 尋找失蹤孩子</title>
+
+<!-- ===================== 資源放置對照表 =====================
+video/search_corridor.mp4        ← 30–60 秒搜尋場景影片（不循環；最後停格）
+img/search_poster.jpg            ← 影片載入前封面
+img/avatars/heather.png          ← 海瑟 512x512 透明
+img/avatars/dean.png             ← 迪恩 512x512 透明
+img/avatars/isaac.png            ← 艾薩克 512x512 透明
+img/avatars/yasonina.png         ← 雅索妮娜（可選）
+audio/bgm_search_tense.mp3       ← 緊張探索 BGM（單一首，循環）
+============================================================ -->
+
+<style>
+  :root{
+    --c-text:#e7f1ff; --c-sub:#b9d2ea;
+    --blur:8px; --ui-w:max(680px,42vw);
+  }
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;
+    font-family:"Noto Sans TC",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+
+  /* 影片與海報 */
+  #poster{position:absolute;inset:0;background:url("img/search_poster.jpg") center/cover no-repeat;
+    z-index:0;opacity:1;transition:opacity .8s ease;}
+  #bgVideo{position:absolute;inset:0;z-index:0;width:100%;height:100%;
+    object-fit:cover;filter:brightness(.86) contrast(1.08);opacity:0;transition:opacity .8s ease;}
+  /* 動態層 */
+  canvas#particles, canvas#snow{position:absolute;inset:0;z-index:1;pointer-events:none;}
+
+  /* 章節標題 */
+  .chapter{position:absolute;top:24px;left:50%;transform:translateX(-50%);
+    color:var(--c-text);letter-spacing:.18em;font-weight:600;z-index:5;
+    text-shadow:0 0 24px #0009, 0 0 32px #0009;}
+
+  /* HUD & 背包 */
+  .hud{position:absolute;right:18px;top:18px;z-index:6;display:flex;gap:12px}
+  .btn{background:linear-gradient(90deg,#1e6aff,#4fd5ff);color:#fff;border:none;border-radius:10px;
+    padding:10px 16px;font-size:.96rem;letter-spacing:.06em;cursor:pointer;
+    box-shadow:0 0 16px #4fb4ff66;transition:.25s ease;}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 0 24px #8bd3ffaa;}
+  .btn.secondary{background:#0b1630cc;border:1px solid #8bd3ff55;box-shadow:none;color:#cfe9ff}
+  .btn.ghost{background:transparent;border:1px solid #8bd3ff33;color:#b9d2ea}
+  .inventory{position:absolute;left:18px;bottom:18px;z-index:6;display:flex;gap:8px;align-items:center;
+    color:#cfe9ff;background:#0a1222b3;padding:10px 12px;border-radius:10px;border:1px solid #8bd3ff55;backdrop-filter:blur(6px)}
+
+  /* 選項（上移避免被對話遮住） */
+  .choices{position:absolute;left:50%;bottom:calc(40px + 220px);transform:translateX(-50%);
+    display:none;z-index:5;gap:12px;flex-direction:column;width:min(760px,92vw)}
+  .choice{background:#0a1222cc;border:1px solid #8bd3ff55;border-radius:12px;padding:14px 16px;
+    color:#d7eaff;cursor:pointer;transition:.2s;backdrop-filter:blur(6px)}
+  .choice:hover{border-color:#9fe0ff;box-shadow:0 0 18px #3ec7ff55;transform:translateY(-2px)}
+
+  /* 對話區（沿用） */
+  .dialog{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);
+    width:min(980px,92vw);z-index:5;display:grid;grid-template-columns:96px 1fr;
+    gap:18px;align-items:end;backdrop-filter:blur(var(--blur));
+    background:linear-gradient(180deg,#0a1222aa,#03060c99);
+    border:1px solid #6fbaf833;border-radius:16px;padding:16px 18px;
+    box-shadow:0 0 36px #061427aa,inset 0 0 0 1px #8bd3ff22;}
+  .avatar{width:96px;height:96px;border-radius:12px;background:#0a1222 url() center/contain no-repeat;
+    border:1px solid #8bd3ff55;box-shadow:0 0 24px #2ec7ff33;}
+  .bubble{color:var(--c-text);line-height:1.6;}
+  .name{font-weight:800;letter-spacing:.12em;margin-bottom:6px;color:#cfe9ff}
+  .content{color:var(--c-sub);font-size:1.05rem}
+  .ctl{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<!-- 海報與影片 -->
+<div id="poster"></div>
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="video/search_corridor.mp4" type="video/mp4">
+</video>
+
+<!-- 動態層 -->
+<canvas id="particles"></canvas>
+<canvas id="snow"></canvas>
+
+<div class="chapter">MISSION — 尋找失蹤孩子 / Search Missing Child</div>
+
+<!-- HUD -->
+<div class="hud">
+  <button class="btn secondary" id="btnBgm">BGM：開</button>
+  <button class="btn ghost" id="btnSkip">跳過對話</button>
+</div>
+
+<!-- 背包 -->
+<div class="inventory">
+  🎒 背包：<span id="invList">手電筒（微光）、繃帶</span>
+  <button class="btn secondary" id="btnUse">使用道具</button>
+</div>
+
+<!-- 選項 -->
+<div class="choices" id="choices"></div>
+
+<!-- 對話區 -->
+<div class="dialog" id="dialog">
+  <div class="avatar" id="avatar"></div>
+  <div class="bubble">
+    <div class="name" id="name">—</div>
+    <div class="content" id="text">…</div>
+    <div class="ctl">
+      <button class="btn" id="btnNext">下一句 ▷</button>
+      <button class="btn secondary" id="btnAuto">自動播放</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============== 影片載入與停格（不循環） ============== */
+const video = document.getElementById('bgVideo');
+const poster = document.getElementById('poster');
+video.loop = false;
+video.addEventListener('loadeddata', ()=>{ video.style.opacity=1; poster.style.opacity=0; });
+video.addEventListener('ended', ()=> video.pause());
+video.addEventListener('error', ()=>{ console.warn('Video load error'); poster.style.opacity=1; });
+
+/* ============== 單一循環 BGM ============== */
+const bgm = new Audio('audio/bgm_search_tense.mp3');
+bgm.loop = true; bgm.volume = 0.55;
+const btnBgm = document.getElementById('btnBgm');
+function tryPlay(){ bgm.play().catch(()=>{}); }
+document.addEventListener('pointerdown', tryPlay, { once:true });
+btnBgm.onclick = ()=>{ if(bgm.paused){ bgm.play(); btnBgm.textContent='BGM：開'; } else { bgm.pause(); btnBgm.textContent='BGM：關'; } };
+
+/* ============== 光粒 + 飄雪（淡） ============== */
+const p = document.getElementById('particles'), pctx = p.getContext('2d');
+const s = document.getElementById('snow'), sctx = s.getContext('2d');
+let W,H; const particles=[], flakes=[];
+function resize(){ W=p.width=s.width=innerWidth; H=p.height=s.height=innerHeight; }
+addEventListener('resize',resize); resize();
+for(let i=0;i<110;i++){ particles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.6,s:Math.random()*0.35+0.18,a:Math.random()*Math.PI*2}) }
+for(let i=0;i<140;i++){ flakes.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+0.6,s:Math.random()*0.55+0.25,w:Math.random()*0.6+0.2}) }
+(function loop(){
+  pctx.clearRect(0,0,W,H); pctx.fillStyle='rgba(160,220,255,.65)';
+  particles.forEach(pt=>{ pt.a+=0.002; pt.y+=pt.s; pt.x+=Math.sin(pt.a)*0.2; if(pt.y>H){pt.y=-5;pt.x=Math.random()*W;}
+    pctx.beginPath(); pctx.arc(pt.x,pt.y,pt.r,0,Math.PI*2); pctx.fill(); });
+  sctx.clearRect(0,0,W,H); sctx.fillStyle='rgba(255,255,255,.85)';
+  flakes.forEach(f=>{ f.y+=f.s; f.x+=Math.sin((f.y+f.x)*0.003)*f.w; if(f.y>H+6){f.y=-6;f.x=Math.random()*W;}
+    sctx.beginPath(); sctx.arc(f.x,f.y,f.r,0,Math.PI*2); sctx.fill(); });
+  requestAnimationFrame(loop);
+})();
+
+/* ============== 對話系統（沿用） ============== */
+const $name = document.getElementById('name');
+const $text = document.getElementById('text');
+const $avatar = document.getElementById('avatar');
+const $next = document.getElementById('btnNext');
+const $choices = document.getElementById('choices');
+let autoTimer=null;
+
+const inv = ['手電筒（微光）','繃帶']; // 展示
+document.getElementById('btnUse').onclick = ()=>{
+  alert('你切換了手電筒微光（+可見度，-容易被發現）。');
+};
+
+// 主線台詞 + 分支入口
+const script = [
+  { n:'海瑟', a:'img/avatars/heather.png', t:'「呼——別出聲。我看到前面有很小的影子。」' },
+  { n:'迪恩', a:'img/avatars/dean.png',    t:'「腳印往北側側廊。石塊鬆動，小心別踩。」' },
+  { n:'艾薩克', a:'img/avatars/isaac.png',  t:'「等等，那不是孩子，是……誘餌？」' },
+  { n:'海瑟', a:'img/avatars/heather.png', t:'「影子在發抖。也許真的有人。」' },
+  { n:'迪恩', a:'img/avatars/dean.png',    t:'「決定吧：立刻上前，或繞側廊包抄。」', choice:[
+      { label:'直接上前安撫（風險高）', goto:'front' },
+      { label:'繞行側廊包抄（安全）', goto:'flank' }
+    ] }
+];
+
+// 分支
+const branches = {
+  front: [
+    { n:'海瑟', a:'img/avatars/heather.png', t:'「嗨，我們是來帶你回家的——」' },
+    { n:'艾薩克', a:'img/avatars/isaac.png',  t:'「小心！岩壁有異動！」' },
+    { n:'系統', a:'', t:'你保護了影子。但通道崩落，必須改走下層管道。', end:'mission_core.html' }
+  ],
+  flank: [
+    { n:'迪恩', a:'img/avatars/dean.png', t:'「三、二、一——我從右側牽制。」' },
+    { n:'海瑟', a:'img/avatars/heather.png', t:'「抓到了！真的是孩子……但被施了幻影。」' },
+    { n:'系統', a:'', t:'解除幻影，需要回到「記憶之核」取得鑰匙碎片。', end:'mission_core.html' }
+  ]
+};
+
+let idx=0, active=script;
+function render(line){
+  if(!line) return;
+  $name.textContent = line.n || ' ';
+  $text.textContent = line.t || ' ';
+  $avatar.style.backgroundImage = line.a ? `url(${line.a})` : 'none';
+
+  if(line.choice){ showChoices(line.choice); } else { $choices.style.display='none'; }
+
+  const btnNext = document.getElementById('btnNext');
+  if(line.end){
+    btnNext.textContent='返回：記憶之核 ▷';
+    btnNext.onclick=()=>fadeTo(line.end);
+  }else{
+    btnNext.textContent='下一句 ▷';
+    btnNext.onclick=next;
+  }
+}
+function next(){ idx++; if(idx>=active.length){ idx=active.length-1; return; } render(active[idx]); }
+function showChoices(list){
+  $choices.innerHTML='';
+  list.forEach(c=>{
+    const div=document.createElement('div'); div.className='choice'; div.textContent=c.label;
+    div.onclick=()=>{ active = branches[c.goto] || active; idx=-1; $choices.style.display='none'; next(); };
+    $choices.appendChild(div);
+  });
+  $choices.style.display='flex';
+}
+
+// 自動播放 & 跳過
+document.getElementById('btnAuto').onclick = function(){
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; this.textContent='自動播放'; return; }
+  this.textContent='自動中…';
+  autoTimer=setInterval(()=>{ if($choices.style.display==='flex') return; next(); }, 2600);
+};
+document.getElementById('btnSkip').onclick = ()=>{ idx=active.length-1; render(active[idx]); };
+
+// 轉場
+function fadeTo(url){ document.body.style.transition='800ms ease'; document.body.style.opacity='0'; setTimeout(()=>location.href=url, 820); }
+
+// 初始化
+render(active[0]);
+</script>
+</body>
+</html>

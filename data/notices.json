@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "updated_at": "2025-01-20T08:00:00Z",
+  "pin_order": ["sys_welcome", "quest_artroom_ink", "event_winter_festival"],
+  "items": [
+    {
+      "id": "sys_welcome",
+      "type": "system",
+      "title": "歡迎回到蘭薩爾！",
+      "subtitle": "新學期佈告與任務已更新",
+      "body": "前往校門口可以查看全校導覽。完成一則布告上的任務即可獲得新手獎勵。",
+      "icon": "img/ui/ico_megaphone.svg",
+      "paper": "img/props/paper_note_b.png",
+      "pin": "img/props/pin_blue.png",
+      "stamp": "img/props/stamp_new.png",
+      "cta": {
+        "text": "去校門口",
+        "href": "school.html#gate"
+      },
+      "give": { "coins": 0, "C": 0, "E": 0, "T": 0 },
+      "expires": null
+    },
+    {
+      "id": "quest_artroom_ink",
+      "type": "quest",
+      "title": "【任務】幫忙整理顏料櫃",
+      "subtitle": "美術教室需要一雙細心的手",
+      "body": "到美術教室點選「幫忙整理顏料」即可完成。完成可獲得：同理+2、道具「畫筆」。",
+      "icon": "img/ui/ico_quest.svg",
+      "paper": "img/props/paper_note_c.png",
+      "pin": "img/props/pin_red.png",
+      "stamp": null,
+      "cta": { "text": "前往美術教室", "href": "school.html#art" },
+      "give": { "coins": 0, "C": 0, "E": 2, "T": 0, "item": "畫筆" },
+      "expires": "2025-12-31"
+    },
+    {
+      "id": "event_winter_festival",
+      "type": "event",
+      "title": "【活動】冬季音樂祭 志工招募",
+      "subtitle": "音樂教室報到，完成排練支援",
+      "body": "協助鋼琴搬運與譜架整理。完成可獲得：勇氣+1、真實+1、金幣+20。",
+      "icon": "img/ui/ico_calendar.svg",
+      "paper": "img/props/paper_note_a.png",
+      "pin": "img/props/paperclip_silver.png",
+      "stamp": "img/props/stamp_event.png",
+      "cta": { "text": "去音樂教室", "href": "school.html#music" },
+      "give": { "coins": 20, "C": 1, "E": 0, "T": 1 },
+      "expires": "2025-03-31"
+    }
+  ]
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>蘭薩爾小學 RPG | SnowWolf HUB v6.2 COMPLETE</title>
+
+<!-- 🔹 套件 -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.105.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/panolens@0.12.0/build/panolens.min.js"></script>
+<link rel="stylesheet" href="css/style.css" />
+
+<style>
+#loading {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #9ad6ff;
+  font-size: 18px;
+  z-index: 999;
+}
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+<div id="loading">⏳ 正在載入學園世界...</div>
+
+<!-- === Panorama 背景 === -->
+<div id="panoWrap"><div id="panoMount"></div></div>
+
+<!-- === ❄️ 雪與 ✨ 粒子特效層 === -->
+<canvas id="snow"></canvas>
+<div id="fx_particles"></div>
+
+<!-- === 🎮 介面層 === -->
+<div id="ui">
+
+  <!-- 🔹 導覽列 -->
+  <div class="topbar">
+    <button class="chip" data-jump="isaac_home.html">🏠 艾薩克的家</button>
+    <button class="chip" data-jump="wardrobe.html">🧥 衣櫃</button>
+    <button class="chip" data-jump="inventory.html">🎒 道具</button>
+    <div class="spacer"></div>
+    <button id="bgmBtn" class="chip">🔊 BGM 開</button>
+  </div>
+
+  <!-- 🔹 狀態 HUD -->
+  <div id="hud">
+    <div class="attr" id="hudC"><span>勇氣</span><b>24</b></div>
+    <div class="attr" id="hudE"><span>同理</span><b>18</b></div>
+    <div class="attr" id="hudT"><span>真實</span><b>12</b></div>
+  </div>
+
+  <!-- 🔹 任務清單 -->
+  <div id="questBox">
+    <h4>任務 Quest</h4>
+    <ul id="questList"></ul>
+  </div>
+
+  <!-- 🔹 對話框 -->
+  <div id="dialogBox" class="dialog hidden">
+    <div class="avatar"><img id="ava" src="" alt="NPC"></div>
+    <div class="text">
+      <div id="who" class="who"></div>
+      <div id="line" class="line"></div>
+    </div>
+    <button id="next" class="btn">下一句 ▶</button>
+  </div>
+
+  <!-- 🔹 場景按鈕 -->
+  <div id="sceneBtns">
+    <button class="hotbtn" data-pan="gate">校門口</button>
+    <button class="hotbtn" data-pan="classroom">教室</button>
+    <button class="hotbtn" data-pan="library">圖書館</button>
+    <button class="hotbtn" data-pan="music">音樂教室</button>
+    <button class="hotbtn" data-pan="art">美術教室</button>
+    <button class="hotbtn" data-pan="playground">操場</button>
+    <button class="hotbtn" data-pan="principal">校長室</button>
+  </div>
+
+  <!-- 🔹 快捷列 -->
+  <div class="shortcut">
+    <button class="chip" data-jump="dormitory.html">🏫 宿舍</button>
+    <button class="chip" data-jump="courtyard.html">📜 佈告欄</button>
+    <button class="chip" data-jump="hall.html">🏛️ 成就殿堂</button>
+  </div>
+
+</div>
+
+<!-- === 音樂與音效 === -->
+<audio id="sfx" src="sfx/click.wav" preload="auto"></audio>
+<audio id="bgm_day" src="audio/school_day.mp3" loop></audio>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* === 🎵 音樂啟動 === */
+  const bgm = document.getElementById("bgm_day");
+  bgm.volume = 0.4;
+  const playBGM = () => { bgm.play().catch(()=>{}); };
+  document.body.addEventListener("click", playBGM, { once:true });
+
+  /* === ❄️ 雪特效 === */
+  const snowCanvas = document.getElementById("snow");
+  const ctx = snowCanvas.getContext("2d");
+  let snowflakes = [];
+  function resize() { snowCanvas.width = innerWidth; snowCanvas.height = innerHeight; }
+  window.addEventListener("resize", resize); resize();
+  for(let i=0;i<180;i++){ snowflakes.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*3+1,d:Math.random()+0.5}); }
+  function drawSnow(){
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+    ctx.fillStyle="rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    for(let s of snowflakes){ ctx.moveTo(s.x,s.y); ctx.arc(s.x,s.y,s.r,0,Math.PI*2,true); }
+    ctx.fill();
+    for(let s of snowflakes){ s.y+=s.d; if(s.y>innerHeight){s.y=0;s.x=Math.random()*innerWidth;} }
+    requestAnimationFrame(drawSnow);
+  } drawSnow();
+
+  /* === ✨ 魔法粒子 === */
+  const fx=document.getElementById("fx_particles");
+  for(let i=0;i<80;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+    p.style.left=Math.random()*100+"vw";
+    p.style.animationDuration=8+Math.random()*10+"s";
+    p.style.animationDelay=Math.random()*8+"s";
+    fx.appendChild(p);
+  }
+
+  /* === 📷 Panorama === */
+  let viewer,currentPano;
+  const PANO={
+    gate:"img/360/school_gate_360.jpg",
+    classroom:"img/360/school_classroom_360.jpg",
+    library:"img/360/school_library_360.jpg",
+    music:"img/360/school_music_360.jpg",
+    art:"img/360/school_art_360.jpg",
+    playground:"img/360/school_playground_360.jpg",
+    principal:"img/360/school_office_360.jpg"
+  };
+  function ensureViewer(){
+    if(!viewer){
+      viewer=new PANOLENS.Viewer({
+        container:document.querySelector("#panoMount"),
+        controlBar:false,autoHideInfospot:true,cameraFov:75
+      });
+    }
+    return viewer;
+  }
+  function setScene(name){
+    const url=PANO[name];
+    if(!url)return;
+    const v=ensureViewer();
+    if(currentPano){v.remove(currentPano);}
+    currentPano=new PANOLENS.ImagePanorama(url);
+    v.add(currentPano);
+    v.setPanorama(currentPano);
+  }
+
+  /* === 💬 對話與任務 === */
+  const dialog=$("#dialogBox"),who=$("#who"),line=$("#line"),ava=$("#ava"),next=$("#next");
+  const questList=$("#questList");
+  let questStatus={},cur=0,activeDialogue=[];
+
+  function showLine(o){who.textContent=o.n;line.textContent=o.t;ava.src=o.a||"img/npc/system.png";}
+  function addQuest(q){ if(!questStatus[q]){questStatus[q]={done:false};const li=document.createElement("li");li.textContent="🗒 "+q;li.dataset.q=q;questList.appendChild(li);} }
+  function completeQuest(q){const li=questList.querySelector(`[data-q="${q}"]`);if(li){li.textContent="✅ "+q;li.style.color="#ffd96a";questStatus[q].done=true;}}
+  function updateStat(id,val){
+  const el = $("#hud"+id);
+  const num = el.querySelector("b");
+  num.textContent = parseInt(num.textContent)+val;
+  el.classList.add("gain");
+  setTimeout(()=>el.classList.remove("gain"),1500);
+
+  // 💫 新增浮動特效
+  const floatLayer = document.getElementById("statFloatLayer");
+  const text = document.createElement("div");
+  let label = "";
+  if(id==="C") label = "+勇氣";
+  if(id==="E") label = "+同理";
+  if(id==="T") label = "+真實";
+  text.className = "stat-float";
+  text.textContent = label;
+  floatLayer.appendChild(text);
+  setTimeout(()=>text.remove(),1600);
+}
+
+  const SCENE_DIALOGUE={
+    music:[{n:"音樂老師",a:"img/npc/teacher.png",t:"今天我們來聆聽心的節奏。"},
+           {n:"音樂老師",a:"img/npc/teacher.png",t:"音樂讓我們更懂得彼此。"},
+           {n:"音樂老師",a:"img/npc/teacher.png",t:"彈奏你的勇氣之音吧！"},
+           {n:"音樂老師",a:"img/npc/teacher.png",t:"節奏穩定、情感飽滿。"},
+           {n:"音樂老師",a:"img/npc/teacher.png",t:"太好了！你獲得同理+1。"}],
+    art:[{n:"美術老師",a:"img/npc/teacher.png",t:"藝術就是勇氣與真實的顏色。"},
+         {n:"美術老師",a:"img/npc/teacher.png",t:"別怕錯誤，每一筆都重要。"},
+         {n:"美術老師",a:"img/npc/teacher.png",t:"這幅畫充滿生命力。"},
+         {n:"美術老師",a:"img/npc/teacher.png",t:"筆觸中的光很動人。"},
+         {n:"美術老師",a:"img/npc/teacher.png",t:"勇氣+2！任務完成。"}],
+    library:[{n:"圖書管理員",a:"img/npc/teacher.png",t:"這裡藏著時間的秘密。"},
+             {n:"圖書管理員",a:"img/npc/teacher.png",t:"每本書都在低語。"},
+             {n:"圖書管理員",a:"img/npc/teacher.png",t:"你發現一本會翻頁的書。"},
+             {n:"系統",a:"img/npc/system.png",t:"真實+2！獲得『時間秘境之書』。"}],
+    classroom:[{n:"老師",a:"img/npc/teacher.png",t:"今天的主題是勇氣。"},
+               {n:"老師",a:"img/npc/teacher.png",t:"誰願意分享自己的經驗？"},
+               {n:"學生",a:"img/npc/teacher.png",t:"我曾害怕發表，但我還是嘗試了。"},
+               {n:"老師",a:"img/npc/teacher.png",t:"太好了！勇氣+1！"}],
+    playground:[{n:"系統",a:"img/npc/system.png",t:"你在雪中發現一枚徽章。"},
+                {n:"系統",a:"img/npc/system.png",t:"徽章閃耀著光芒。"},
+                {n:"系統",a:"img/npc/system.png",t:"勇氣+1。"}],
+    principal:[{n:"校長‧羅倫斯",a:"img/npc/principal.png",t:"真實比勝利更重要。"},
+               {n:"校長‧羅倫斯",a:"img/npc/principal.png",t:"帶著光前行吧。"},
+               {n:"系統",a:"img/npc/system.png",t:"真實+2！任務完成。"}]
+  };
+
+  function startDialogue(lines,onFinish){
+    dialog.classList.remove("hidden");
+    activeDialogue=lines; cur=0;
+    showLine(activeDialogue[cur]);
+    next.onclick=()=>{
+      cur++;
+      if(cur<activeDialogue.length){showLine(activeDialogue[cur]);}
+      else{dialog.classList.add("hidden");if(onFinish)onFinish();}
+    };
+  }
+
+  function triggerSceneLogic(scene){
+    const lines=SCENE_DIALOGUE[scene];
+    if(!lines) return;
+    startDialogue(lines,()=>{
+      switch(scene){
+        case "music": addQuest("音樂任務"); completeQuest("音樂任務"); updateStat("E",1); break;
+        case "art": addQuest("美術任務"); completeQuest("美術任務"); updateStat("C",2); break;
+        case "library": addQuest("圖書館任務"); completeQuest("圖書館任務"); updateStat("T",2); break;
+        case "classroom": addQuest("教室任務"); completeQuest("教室任務"); updateStat("C",1); break;
+        case "playground": addQuest("操場任務"); completeQuest("操場任務"); updateStat("C",1); break;
+        case "principal": addQuest("校長室任務"); completeQuest("校長室任務"); updateStat("T",2); break;
+      }
+    });
+  }
+
+  /* === 按鈕綁定 === */
+  document.querySelectorAll("[data-pan]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.getElementById("sfx").play().catch(()=>{});
+      setScene(btn.dataset.pan);
+      triggerSceneLogic(btn.dataset.pan);
+    });
+  });
+  document.querySelectorAll("[data-jump]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.getElementById("sfx").play().catch(()=>{});
+      location.href=btn.dataset.jump;
+    });
+  });
+
+  /* === 開場對話 === */
+  const opening=[
+    {n:"校長‧羅倫斯",a:"img/npc/principal.png",t:"歡迎回到蘭薩爾小學。"},
+    {n:"校長‧羅倫斯",a:"img/npc/principal.png",t:"勇氣、同理與真實，是成長的三把鑰匙。"},
+    {n:"校長‧羅倫斯",a:"img/npc/principal.png",t:"去吧，開啟屬於你的冒險！"}
+  ];
+  function startOpening(){ startDialogue(opening,()=>addQuest("序章：踏入蘭薩爾")); }
+
+  /* === 啟動 === */
+  setScene("gate");
+  setTimeout(()=>{startOpening();$("#loading").style.display="none";},800);
+
+});
+
+/* 小工具 */
+function $(q,sc=document){return sc.querySelector(q);}
+function $$(q,sc=document){return Array.from(sc.querySelectorAll(q));}
+</script>
+
+<!-- 💫 屬性加成文字特效層 -->
+<div id="statFloatLayer"></div>
+
+</body>
+</html>

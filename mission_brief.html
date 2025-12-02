@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>SNOW WOLF BOY // OPERATION BRIEF</title>
+
+<style>
+/* ---------------------------------
+   CORE TOKENS
+--------------------------------- */
+*{
+  box-sizing:border-box;
+  font-family:"Noto Sans TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+:root{
+  --accent:#8bb7ff;
+  --accentGlow:rgba(139,183,255,.7);
+  --accentDim:rgba(139,183,255,.35);
+  --danger:#ff4f7d;
+  --dangerGlow:rgba(255,79,125,.8);
+
+  --panel-bg:rgba(0,0,0,.45);
+  --panel-border:rgba(139,183,255,.4);
+  --panel-shadow:0 0 24px rgba(139,183,255,.5),0 40px 80px rgba(0,0,0,.9);
+}
+
+body{
+  margin:0;
+  background:#000;
+  color:#fff;
+  min-height:100vh;
+  overflow:hidden;
+  position:relative;
+  font-size:14px;
+  line-height:1.5;
+  letter-spacing:.02em;
+}
+
+/* ---------------------------------
+   BACKGROUND LAYERS
+--------------------------------- */
+/* 動態主場景：會被 JS 換 background-image */
+.bg-scene{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(25,40,80,.5) 0%, rgba(0,0,10,.95) 70%),
+    url("img/brief/bg_lake.jpg") center/cover no-repeat;
+  filter:brightness(1.07) saturate(1.15);
+  transition:background-image .4s ease, filter .4s ease;
+}
+
+/* 守護雪狼（右上常駐） */
+.bg-wolf{
+  position:fixed;
+  right:0;
+  top:0;
+  bottom:0;
+  width:50%;
+  max-width:800px;
+  background:
+    radial-gradient(circle at 60% 40%, rgba(30,40,80,.6) 0%, transparent 70%),
+    url("img/brief/guardian_wolf.png") right 20% top 10% / contain no-repeat;
+  mix-blend-mode:screen;
+  opacity:.28;
+  filter:drop-shadow(0 0 12px rgba(120,180,255,.4)) brightness(1.1);
+  pointer-events:none;
+  z-index:1;
+}
+
+/* 能量極光 */
+.bg-aurora{
+  position:fixed;inset:0;
+  z-index:2;
+  background:
+    radial-gradient(circle at 30% 70%, rgba(120,180,255,.18) 0%, transparent 70%),
+    radial-gradient(circle at 75% 25%, rgba(255,120,200,.12) 0%, transparent 70%);
+  filter:blur(60px);
+  mix-blend-mode:screen;
+  animation:auroraFloat 8s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes auroraFloat{
+  0%{transform:translate(-2%,2%) scale(1);opacity:.55;}
+  50%{transform:translate(1%,-1%) scale(1.07);opacity:.8;}
+  100%{transform:translate(2%,1%) scale(1.1);opacity:.6;}
+}
+
+/* 掃描線 */
+.scanlines{
+  position:fixed;inset:0;
+  z-index:3;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,.03) 0px,
+    rgba(255,255,255,0) 2px,
+    rgba(0,0,0,0) 3px,
+    rgba(0,0,0,0) 4px
+  );
+  mix-blend-mode:screen;
+  opacity:.15;
+  animation:flicker .25s steps(2) infinite;
+}
+@keyframes flicker{
+  0%{opacity:.16;}
+  50%{opacity:.1;}
+  100%{opacity:.16;}
+}
+
+/* 下掃亮條 */
+.scanbar{
+  position:fixed;
+  left:0;right:0;
+  height:2px;
+  background:radial-gradient(circle at 50% 50%, var(--accentGlow) 0%, rgba(139,183,255,0) 70%);
+  box-shadow:0 0 12px var(--accentGlow);
+  filter:drop-shadow(0 0 6px var(--accentGlow));
+  opacity:.4;
+  mix-blend-mode:screen;
+  z-index:4;
+  animation:scanDown 4s linear infinite;
+}
+@keyframes scanDown{
+  0%{top:0%;}
+  100%{top:100%;}
+}
+
+/* ---------------------------------
+   TOP HEADER / MISSION CONTEXT
+--------------------------------- */
+.header-block{
+  position:fixed;
+  top:3vh;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  text-align:center;
+  max-width:90%;
+}
+.mission-ep-label{
+  font-size:11px;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  text-shadow:0 0 8px var(--accentGlow),0 0 32px var(--accentGlow);
+}
+.mission-title{
+  margin-top:8px;
+  font-size:clamp(20px,2.2vw,28px);
+  font-weight:600;
+  color:#fff;
+  line-height:1.4;
+  text-shadow:
+    0 0 16px rgba(160,200,255,.8),
+    0 0 48px rgba(160,200,255,.4),
+    0 0 80px rgba(160,200,255,.2);
+}
+.mission-desc{
+  margin-top:6px;
+  font-size:12px;
+  color:#8e94c7;
+  line-height:1.4;
+  text-shadow:0 0 8px rgba(0,0,0,.8);
+}
+.mission-vow{
+  margin-top:18px;
+  font-size:11px;
+  color:#cfd6ff;
+  line-height:1.6;
+  white-space:pre-line;
+  text-shadow:0 0 10px rgba(0,0,0,.9);
+  max-width:480px;
+  margin-left:auto;
+  margin-right:auto;
+  font-weight:500;
+}
+.mission-vow .callout{
+  color:var(--accent);
+  font-weight:600;
+  text-shadow:0 0 8px var(--accentGlow);
+}
+
+/* ---------------------------------
+   CORE HUD CIRCLE (召喚圈)
+--------------------------------- */
+.core-halo-wrapper{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-45%);
+  width:min(460px,90vw);
+  height:min(460px,90vw);
+  z-index:12;
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.halo-outer{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border:2px solid var(--accentDim);
+  box-shadow:0 0 50px var(--accentGlow),0 80px 160px rgba(0,0,0,1);
+  animation:haloBreath 4s ease-in-out infinite;
+}
+@keyframes haloBreath{
+  0%{transform:scale(1);box-shadow:0 0 40px var(--accentGlow),0 60px 120px rgba(0,0,0,1);}
+  50%{transform:scale(1.03);box-shadow:0 0 70px var(--accentGlow),0 120px 200px rgba(0,0,0,1);}
+  100%{transform:scale(1);box-shadow:0 0 40px var(--accentGlow),0 60px 120px rgba(0,0,0,1);}
+}
+.halo-mid{
+  position:absolute;
+  inset:10%;
+  border-radius:50%;
+  border:1px dashed rgba(139,183,255,.4);
+  box-shadow:0 0 20px rgba(139,183,255,.4);
+  animation:haloSpin 12s linear infinite;
+}
+@keyframes haloSpin{
+  0%{transform:rotate(0deg) scale(1);}
+  50%{transform:rotate(180deg) scale(1.04);}
+  100%{transform:rotate(360deg) scale(1);}
+}
+
+.halo-inner-panel{
+  position:relative;
+  width:70%;
+  max-width:260px;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(139,183,255,.6);
+  border-radius:14px;
+  box-shadow:0 0 32px rgba(120,180,255,.8),0 50px 80px rgba(0,0,0,.9);
+  padding:16px 14px 48px;
+  pointer-events:auto;
+  color:#fff;
+  font-size:12px;
+  line-height:1.5;
+  text-shadow:0 0 8px rgba(0,0,0,.9);
+}
+.inner-toprow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.inner-left-label{
+  font-size:10px;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  text-shadow:0 0 8px var(--accentGlow);
+  flex-shrink:0;
+}
+.inner-sigil-box{
+  width:60px;
+  height:60px;
+  flex-shrink:0;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(139,183,255,.4);
+  border-radius:8px;
+  box-shadow:0 0 16px rgba(139,183,255,.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.inner-sigil-box img{
+  max-width:44px;
+  max-height:44px;
+  filter:drop-shadow(0 0 8px var(--accentGlow));
+}
+
+.target-name{
+  color:#fff;
+  font-size:14px;
+  font-weight:600;
+  text-shadow:0 0 12px rgba(150,200,255,.9);
+  line-height:1.4;
+  margin-bottom:8px;
+}
+.target-desc{
+  color:#cfd6ff;
+  white-space:pre-line;
+  margin-bottom:14px;
+  font-size:12px;
+}
+
+.risk-row{
+  font-size:11px;
+  line-height:1.4;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  color:#fff;
+}
+.risk-label{
+  color:#8bb7ff;
+  text-shadow:0 0 8px var(--accentGlow);
+  margin-right:6px;
+  letter-spacing:.05em;
+  font-size:11px;
+}
+.risk-tag{
+  font-weight:600;
+  padding:2px 6px;
+  border-radius:6px;
+  border:1px solid var(--danger);
+  color:var(--danger);
+  text-shadow:0 0 8px var(--dangerGlow);
+  box-shadow:0 0 18px var(--dangerGlow);
+  font-size:11px;
+}
+
+/* ---------------------------------
+   BOTTOM HUD BELT
+--------------------------------- */
+.bottom-hud-belt{
+  position:fixed;
+  left:0;right:0;
+  bottom:0;
+  z-index:20;
+  background:linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,0) 80%);
+  padding:16px 16px 24px;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:flex-end;
+  column-gap:16px;
+  row-gap:24px;
+}
+
+/* LEFT CLUSTER */
+.left-cluster{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-width:240px;
+  max-width:280px;
+  flex:1 1 260px;
+}
+.flex-row-btns{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.btn-holo{
+  background:rgba(0,0,0,.5);
+  border:1px solid var(--panel-border);
+  border-radius:6px;
+  min-width:100px;
+  padding:6px 10px;
+  font-size:11px;
+  line-height:1.4;
+  text-align:center;
+  color:#8bb7ff;
+  text-shadow:0 0 8px var(--accentGlow);
+  box-shadow:var(--panel-shadow);
+  cursor:pointer;
+  user-select:none;
+  transition:.15s;
+}
+.btn-holo.active{
+  background:rgba(139,183,255,.18);
+  color:#fff;
+  box-shadow:0 0 20px var(--accentGlow),0 30px 60px rgba(0,0,0,1);
+}
+.btn-holo.linklike{
+  text-decoration:none;
+  color:#fff;
+  text-shadow:0 0 12px rgba(150,200,255,.9);
+}
+.btn-holo.linklike:hover,
+.btn-holo:hover{
+  background:rgba(139,183,255,.18);
+  color:#fff;
+  box-shadow:0 0 20px var(--accentGlow),0 30px 60px rgba(0,0,0,1);
+}
+.comms-panel{
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:10px;
+  box-shadow:var(--panel-shadow);
+  padding:10px 12px;
+  font-size:11px;
+  line-height:1.5;
+  color:#fff;
+  text-shadow:0 0 8px rgba(0,0,0,.9);
+  min-height:110px;
+}
+.comms-head{
+  font-size:10px;
+  font-weight:600;
+  color:var(--accent);
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  text-shadow:0 0 8px var(--accentGlow);
+  margin-bottom:6px;
+}
+.comms-body{
+  white-space:pre-line;
+  color:#cfd6ff;
+  font-size:11px;
+}
+
+/* RIGHT CLUSTER */
+.right-cluster{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  flex:2 1 480px;
+  max-width:calc(100% - 300px);
+}
+
+/* mission sites row */
+.sites-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:flex-end;
+}
+.site-card{
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:10px;
+  box-shadow:var(--panel-shadow);
+  padding:10px 12px;
+  min-width:160px;
+  cursor:pointer;
+  transition:.15s;
+}
+.site-card:hover{
+  background:rgba(139,183,255,.15);
+  box-shadow:0 0 20px var(--accentGlow),0 30px 60px rgba(0,0,0,1);
+}
+.site-card.active{
+  background:rgba(139,183,255,.18);
+  border-color:rgba(139,183,255,.6);
+  box-shadow:0 0 20px var(--accentGlow),0 30px 60px rgba(0,0,0,1);
+}
+.site-name{
+  color:#fff;
+  font-weight:600;
+  font-size:13px;
+  line-height:1.4;
+  text-shadow:0 0 12px rgba(150,200,255,.8);
+}
+.site-risk{
+  margin-top:4px;
+  font-size:11px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px var(--accentGlow);
+}
+
+/* squad row */
+.squad-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:flex-end;
+}
+.squad-chip{
+  position:relative;
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:10px;
+  box-shadow:var(--panel-shadow);
+  padding:10px 12px;
+  width:140px;
+  min-height:120px;
+  color:#fff;
+  font-size:11px;
+  line-height:1.4;
+  text-shadow:0 0 8px rgba(0,0,0,.9);
+}
+.online-dot{
+  position:absolute;
+  right:8px;
+  top:8px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#4dff8a;
+  box-shadow:0 0 10px rgba(77,255,138,.9),0 0 20px rgba(77,255,138,.5);
+  animation:blinkOnline 1.5s infinite;
+}
+@keyframes blinkOnline{
+  0%{opacity:1;}
+  50%{opacity:.4;}
+  100%{opacity:1;}
+}
+.chip-img{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  overflow:hidden;
+  border:1px solid rgba(139,183,255,.6);
+  box-shadow:0 0 12px var(--accentGlow);
+  background:#000;
+  margin-bottom:6px;
+}
+.chip-img img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.chip-name{
+  color:#fff;
+  font-weight:600;
+  font-size:12px;
+  text-shadow:0 0 8px rgba(150,200,255,.9);
+}
+.chip-role{
+  color:#8bb7ff;
+  font-size:11px;
+  text-shadow:0 0 8px var(--accentGlow);
+  line-height:1.4;
+  white-space:nowrap;
+}
+.chip-state{
+  color:#ccc;
+  font-size:11px;
+  opacity:.85;
+  margin-top:4px;
+}
+
+/* DEPLOY block */
+.deploy-block{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  text-align:right;
+  max-width:100%;
+}
+.deploy-btn{
+  position:relative;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(139,183,255,.8);
+  border-radius:20px;
+  padding:14px 22px;
+  font-size:14px;
+  color:#fff;
+  cursor:pointer;
+  text-shadow:0 0 12px rgba(150,200,255,.9);
+  box-shadow:0 0 24px rgba(120,180,255,.8),0 60px 120px rgba(0,0,0,1);
+  transition:.18s;
+  letter-spacing:.05em;
+  min-width:260px;
+}
+.deploy-btn:hover{
+  background:rgba(139,183,255,.18);
+  box-shadow:0 0 32px var(--accentGlow),0 80px 160px rgba(0,0,0,1);
+}
+.deploy-btn .pulse{
+  position:absolute;
+  inset:0;
+  border-radius:20px;
+  background:radial-gradient(circle at 50% 50%, rgba(139,183,255,.3) 0%, transparent 70%);
+  mix-blend-mode:screen;
+  animation:pulseFlash 2s infinite;
+  pointer-events:none;
+}
+@keyframes pulseFlash{
+  0%{opacity:.4;transform:scale(1);}
+  50%{opacity:0;transform:scale(1.4);}
+  100%{opacity:.4;transform:scale(1);}
+}
+
+.deploy-status{
+  margin-top:10px;
+  font-size:11px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px var(--accentGlow);
+  letter-spacing:.08em;
+  min-height:32px;
+  white-space:pre-line;
+}
+.deploy-status.deployed{
+  color:var(--danger);
+  text-shadow:0 0 8px var(--dangerGlow),0 0 20px rgba(255,0,80,.6);
+  animation:flashDeployed .4s steps(1,end) 4;
+}
+@keyframes flashDeployed{
+  0%,100%{opacity:1;}
+  50%{opacity:0;}
+}
+
+/* ---------------------------------
+   RESPONSIVE
+--------------------------------- */
+@media(max-width:800px){
+  .right-cluster{
+    max-width:100%;
+    flex:1 1 auto;
+  }
+  .deploy-btn{
+    min-width:auto;
+    width:100%;
+    text-align:center;
+  }
+  .deploy-block{
+    align-items:stretch;
+    text-align:left;
+  }
+  .sites-row,
+  .squad-row{
+    justify-content:flex-start;
+  }
+}
+@media(max-width:600px){
+  .bottom-hud-belt{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .left-cluster,
+  .right-cluster{
+    max-width:100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- 背景層 -->
+<div class="bg-scene" id="bgScene"></div>
+<div class="bg-wolf"></div>
+<div class="bg-aurora"></div>
+<div class="scanlines"></div>
+<div class="scanbar"></div>
+
+<!-- 頂部任務資訊 -->
+<header class="header-block">
+  <div class="mission-ep-label">EPISODE_01 // 第一季</div>
+  <div class="mission-title">「最遙遠的地方」</div>
+  <div class="mission-desc">
+    OPERATION: MIRROR-LAKE / LVL-03 · 任務目標：
+    回收艾薩克父親最後出現的記憶訊號
+  </div>
+  <div class="mission-vow">
+    我們不是軍隊。<br>
+    我們是彼此的安全帶。<br>
+    只要有一個人沒回家，<span class="callout">任務不算完成。</span>
+  </div>
+</header>
+
+<!-- 中央召喚圈HUD -->
+<section class="core-halo-wrapper">
+  <div class="halo-outer"></div>
+  <div class="halo-mid"></div>
+
+  <div class="halo-inner-panel" id="hudPanel">
+    <div class="inner-toprow">
+      <div class="inner-left-label">TARGET LOCATION</div>
+      <div class="inner-sigil-box">
+        <img id="sigilImg" src="img/ui/sigil_lake.png" alt="sigil">
+      </div>
+    </div>
+
+    <div class="target-name" id="targetName">
+      逆轉之湖 · Mirror Lake
+    </div>
+
+    <div class="target-desc" id="targetDesc">
+湖面會回放「被奪走的那一刻」。
+記憶投影同時包含真相與偽造版本，
+會強迫隊員面對創傷。
+
+次要指令：
+- 確認雪狼族是否在場
+- 評估他們是敵對，還是護送
+    </div>
+
+    <div class="risk-row">
+      <div class="risk-label">危險等級</div>
+      <div class="risk-tag" id="riskTag">HIGH</div>
+    </div>
+  </div>
+</section>
+
+<!-- 底部HUD帶 -->
+<section class="bottom-hud-belt">
+
+  <!-- 左：音訊+無線電 -->
+  <aside class="left-cluster">
+    <div class="flex-row-btns">
+      <div class="btn-holo" id="audioToggle">BGM OFF</div>
+      <a class="btn-holo linklike" href="season1_game.html">← 回任務地圖</a>
+    </div>
+
+    <div class="comms-panel">
+      <div class="comms-head">COMMS // 無線電</div>
+      <div class="comms-body" id="commsBody">
+[里特]：我不會把他丟在那裡不管。
+[海瑟]：你現在在發抖，先慢一點呼吸，好嗎？
+[迪恩]：別裝冷靜。我們全部一起走。
+      </div>
+    </div>
+  </aside>
+
+  <!-- 右：地點選擇 / 小隊列隊 / DEPLOY -->
+  <section class="right-cluster">
+
+    <div class="sites-row" id="sitesRow"><!-- JS builds cards --></div>
+
+    <div class="squad-row">
+      <div class="squad-chip">
+        <div class="online-dot"></div>
+        <div class="chip-img"><img src="img/characters/rit.jpg" alt="里特"></div>
+        <div class="chip-name">里特</div>
+        <div class="chip-role">前鋒 / 救援</div>
+        <div class="chip-state">狀態：OK</div>
+      </div>
+
+      <div class="squad-chip">
+        <div class="online-dot"></div>
+        <div class="chip-img"><img src="img/characters/heather.jpg" alt="海瑟"></div>
+        <div class="chip-name">海瑟</div>
+        <div class="chip-role">偵查 / 支援</div>
+        <div class="chip-state">狀態：OK</div>
+      </div>
+
+      <div class="squad-chip">
+        <div class="online-dot"></div>
+        <div class="chip-img"><img src="img/characters/dean.jpg" alt="迪恩"></div>
+        <div class="chip-name">迪恩</div>
+        <div class="chip-role">防線 / 擋正面</div>
+        <div class="chip-state">狀態：疲勞</div>
+      </div>
+
+      <div class="squad-chip">
+        <div class="online-dot"></div>
+        <div class="chip-img"><img src="img/characters/isaac.jpg" alt="艾薩克"></div>
+        <div class="chip-name">艾薩克</div>
+        <div class="chip-role">遠程 / 老經驗</div>
+        <div class="chip-state">狀態：腿傷</div>
+      </div>
+    </div>
+
+    <div class="deploy-block">
+      <button class="deploy-btn" id="deployBtn">
+        <div class="pulse"></div>
+        DEPLOY INTO NIGHT / 進入夜間行動
+      </button>
+      <div class="deploy-status" id="deployStatus">
+系統待命中…
+連線穩定後可出擊。
+      </div>
+    </div>
+
+  </section>
+</section>
+
+<!-- AUDIO -->
+<audio id="bgmBrief" src="audio/bgm_brief.mp3" preload="auto" loop></audio>
+<audio id="sfxClick" src="audio/ui_click.mp3" preload="auto"></audio>
+<audio id="sfxDeploy" src="audio/ui_deploy.mp3" preload="auto"></audio>
+
+<script>
+/*
+  LOCS: 每個地點除了文字、sigil，現在多一個 bg 屬性。
+  bg 是整頁後面那張主場景圖。
+*/
+const LOCS = {
+  lake:{
+    label:"逆轉之湖 · Mirror Lake",
+    risk:"HIGH",
+    sigil:"img/ui/sigil_lake.png",
+    bg:"img/brief/bg_lake.jpg",
+    desc:`湖面會回放「被奪走的那一刻」。
+記憶投影同時包含真相與偽造版本，
+會強迫隊員面對創傷。
+
+次要指令：
+- 確認雪狼族是否在場
+- 評估他們是敵對，還是護送`,
+    comms:`[海瑟]：湖不是水面，是記憶在滲光。
+[里特]：我爸…我一定要看到他最後一眼。`
+  },
+  forest:{
+    label:"穆高爾森林入口",
+    risk:"MEDIUM",
+    sigil:"img/ui/sigil_forest.png",
+    bg:"img/brief/bg_forest.jpg",
+    desc:`這裡是傳說開始的地方。
+狼群行蹤最頻繁；第一起失蹤案件
+就是在這裡被確認的。
+
+任務：
+- 跟上雪狼族的移動
+- 分辨「掠走」還是「護送」`,
+    comms:`[迪恩]：別散開，我不想又找不到你們。
+[海瑟]：樹梢上有眼睛…不是人類的那種。`
+  },
+  school:{
+    label:"蘭薩爾小學",
+    risk:"LOW",
+    sigil:"img/ui/sigil_school.png",
+    bg:"img/brief/bg_school.jpg",
+    desc:`表面上唯一還可以假裝「很正常」的地方。
+整棟校舍被米斯老師當成臨時防護結界。
+
+任務：
+- 救護 / 整理情報 / 再分隊
+- 任何人受傷，先回到這裡`,
+    comms:`[米斯老師]：你們不是壞孩子。
+大人只是還不知道怎麼保護你們。`
+  },
+  stone:{
+    label:"失去的石墩",
+    risk:"CRITICAL",
+    sigil:"img/ui/sigil_stone.png",
+    bg:"img/brief/bg_stone.jpg",
+    desc:`大人禁止提到的區域。
+像墓碑，也像告示。狼群經過時會低頭。
+他們像是在道歉。
+
+任務：
+- 確認石墩下是否藏著被刪除的訊息
+- 任何發現，不能大聲說出口`,
+    comms:`[艾薩克]：他最後就是被帶往這裡。
+[迪恩]：那我們一起去，把他帶回來。`
+  }
+};
+
+/* DOM refs */
+const bgScene      = document.getElementById("bgScene");
+
+const sigilImg     = document.getElementById("sigilImg");
+const targetNameEl = document.getElementById("targetName");
+const targetDescEl = document.getElementById("targetDesc");
+const riskTagEl    = document.getElementById("riskTag");
+const commsBody    = document.getElementById("commsBody");
+
+const sitesRow     = document.getElementById("sitesRow");
+
+const audioToggle  = document.getElementById("audioToggle");
+const bgmBrief     = document.getElementById("bgmBrief");
+const sfxClick     = document.getElementById("sfxClick");
+const sfxDeploy    = document.getElementById("sfxDeploy");
+
+const deployBtn    = document.getElementById("deployBtn");
+const deployStatus = document.getElementById("deployStatus");
+
+let bgmOn = false;
+let currentLoc = "lake";
+
+/* helpers */
+function playClick(){
+  try{sfxClick.currentTime=0;sfxClick.play();}catch(e){}
+}
+function playDeploy(){
+  try{sfxDeploy.currentTime=0;sfxDeploy.play();}catch(e){}
+}
+
+/* 核心：切換地點時，同步整個世界狀態 */
+function setLocation(key){
+  const d = LOCS[key];
+  if(!d) return;
+  currentLoc = key;
+
+  // 更新 HUD circle
+  sigilImg.src          = d.sigil;
+  sigilImg.alt          = key;
+  targetNameEl.textContent = d.label;
+  targetDescEl.textContent = d.desc;
+  riskTagEl.textContent = d.risk;
+
+  // 更新 無線電
+  commsBody.textContent = d.comms;
+
+  // 更新 背景
+  bgScene.style.backgroundImage =
+    `radial-gradient(circle at 50% 20%, rgba(25,40,80,.5) 0%, rgba(0,0,10,.95) 70%), url("${d.bg}")`;
+
+  // 高亮目前的 site-card
+  document.querySelectorAll(".site-card").forEach(card=>{
+    card.classList.toggle("active", card.dataset.loc===key);
+  });
+}
+
+/* 動態建立四個地點按鈕 */
+function initSites(){
+  sitesRow.innerHTML="";
+  Object.keys(LOCS).forEach(key=>{
+    const d = LOCS[key];
+    const card=document.createElement("div");
+    card.className="site-card";
+    card.dataset.loc=key;
+    card.innerHTML=`
+      <div class="site-name">${d.label}</div>
+      <div class="site-risk">
+        危險等級：
+        <span style="color:#8bb7ff;text-shadow:0 0 8px rgba(139,183,255,.8);">
+          ${d.risk}
+        </span>
+      </div>
+    `;
+    card.addEventListener("click",()=>{
+      playClick();
+      setLocation(key);
+    });
+    sitesRow.appendChild(card);
+  });
+}
+
+/* BGM 切換 */
+audioToggle.addEventListener("click",()=>{
+  playClick();
+  if(bgmOn){
+    bgmBrief.pause();
+    bgmOn=false;
+    audioToggle.textContent="BGM OFF";
+    audioToggle.classList.remove("active");
+  }else{
+    bgmBrief.currentTime=0;
+    bgmBrief.play();
+    bgmOn=true;
+    audioToggle.textContent="BGM ON";
+    audioToggle.classList.add("active");
+  }
+});
+
+/* DEPLOY */
+deployBtn.addEventListener("click",()=>{
+  playDeploy();
+  deployStatus.textContent="MISSION LOCKED\n小隊正在往目標區域移動…";
+  deployStatus.classList.add("deployed");
+
+  // 之後真的可以跳戰鬥頁：
+  // window.location.href = "combat_fullscreen.html?site=" + currentLoc;
+});
+
+/* init */
+initSites();
+setLocation("lake");
+deployStatus.textContent="系統待命中…\n連線穩定後可出擊。";
+</script>
+</body>
+</html>

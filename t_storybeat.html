@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Snow Wolf Boy｜Storybeat</title>
+<style>
+body{
+  margin:0;
+  overflow:hidden;
+  font-family:"Noto Sans TC",sans-serif;
+  background:#000;
+  color:#fff;
+}
+
+/* ===== 背景容器（支援圖片與影片） ===== */
+.bg-container{
+  position:fixed;inset:0;overflow:hidden;
+  z-index:0;
+}
+.bg{
+  position:absolute;
+  inset:0;
+  width:100%;height:100%;
+  object-fit:cover;
+  opacity:0;
+  transition:opacity 1.2s ease;
+}
+.bg.active{opacity:1;}
+
+/* 動態霧層 */
+#animLayer{
+  position:fixed;inset:-10%;z-index:1;
+  background:
+    radial-gradient(circle at 30% 60%, rgba(140,200,255,.12) 0%, transparent 60%),
+    radial-gradient(circle at 70% 30%, rgba(255,180,240,.10) 0%, transparent 70%);
+  mix-blend-mode:screen;
+  animation:fog 18s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes fog{
+  0%{transform:translate(-2%,1%) scale(1.05);}
+  100%{transform:translate(2%,-1%) scale(1.1);}
+}
+
+/* 飄雪動畫層 */
+#snowCanvas{
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  pointer-events:none;
+  z-index:2;
+  mix-blend-mode:screen;
+  opacity:.6;
+}
+
+/* ===== 標題章節 ===== */
+#chapterTitle{
+  position:fixed;
+  top:20vh;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:clamp(28px,4vw,40px);
+  color:#cfe7ff;
+  letter-spacing:0.15em;
+  text-align:center;
+  text-shadow:0 0 20px rgba(139,183,255,.9);
+  opacity:0;
+  animation:fadeInTitle 2.5s ease forwards;
+  z-index:5;
+}
+@keyframes fadeInTitle{
+  0%{opacity:0;transform:translateX(-50%) translateY(10px);}
+  40%{opacity:1;}
+  100%{opacity:1;transform:translateX(-50%) translateY(0);}
+}
+
+/* ===== 小頭像 ===== */
+.avatar{
+  position:fixed;
+  left:3vw;
+  bottom:10vh;
+  width:90px;height:90px;
+  border-radius:50%;overflow:hidden;
+  border:2px solid rgba(255,255,255,.4);
+  box-shadow:0 0 20px rgba(139,183,255,.5);
+  opacity:0;transition:opacity .6s ease;z-index:5;
+}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.avatar.show{opacity:1;}
+
+/* ===== 對話框 ===== */
+.dialogue{
+  position:fixed;
+  bottom:10vh;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(1000px,90vw);
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;
+  padding:16px 22px;
+  box-shadow:0 0 40px rgba(0,0,0,.8);
+  z-index:5;
+}
+.name{font-size:14px;color:#89baff;margin-bottom:6px;}
+.text{font-size:clamp(16px,2vw,20px);line-height:1.6;}
+.text.en{margin-top:5px;color:#cfd8ff;font-size:clamp(14px,1.8vw,18px);}
+
+/* ===== 控制按鈕 ===== */
+.btn-next{
+  position:fixed;right:4vw;bottom:4vh;z-index:5;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.2);
+  color:#fff;border-radius:10px;
+  padding:10px 18px;cursor:pointer;font-size:14px;
+}
+.btn-next:hover{background:rgba(255,255,255,.1);}
+
+/* ===== BGM 切換 ===== */
+#bgmBtn{
+  position:fixed;right:4vw;top:4vh;z-index:6;
+  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);
+  color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;
+  cursor:pointer;
+}
+#bgmBtn:hover{background:rgba(255,255,255,.1);}
+</style>
+</head>
+<body>
+
+<!-- ✅ 背景容器 (可放圖片或影片) -->
+<div class="bg-container">
+  <video id="bgVideo1" class="bg" autoplay muted loop playsinline></video>
+  <video id="bgVideo2" class="bg" autoplay muted loop playsinline></video>
+  <img id="bgImg1" class="bg" />
+  <img id="bgImg2" class="bg" />
+</div>
+
+<div id="animLayer"></div>
+<canvas id="snowCanvas"></canvas>
+
+<!-- 章節標題 -->
+<div id="chapterTitle"></div>
+
+<!-- 小頭像 -->
+<div id="avatar" class="avatar"><img src=""></div>
+
+<!-- 對話 -->
+<div class="dialogue">
+  <div id="name" class="name"></div>
+  <div id="textZh" class="text"></div>
+  <div id="textEn" class="text en"></div>
+</div>
+
+<button id="btnNext" class="btn-next">下一句 ›</button>
+<button id="bgmBtn">🎵 BGM 開</button>
+
+<audio id="bgm" src="audio/bgm/bgm_story_01.mp3" preload="auto" loop></audio>
+<audio id="voice" preload="auto"></audio>
+
+<script>
+/* ========= 劇情資料 ========= */
+const STORY = [
+  {
+    chapter:"序章：霧中的校園 / Prologue: Misty School",
+    bg:"img/storybeats/01_school_mist.mp4", // ✅ 支援影片
+    name:"旁白 Narration",
+    zh:"清晨的霧像棉絮，在操場邊緣慢慢散開。",
+    en:"The morning mist unravels like threads of cotton across the field.",
+    avatar:"",
+    voice:"audio/voice/narrator_001.mp3"
+  },
+  {
+    chapter:"",
+    bg:"img/storybeats/12_courtyard_night.webm",
+    name:"海瑟 Heather",
+    zh:"「我聽見有人在呼喚。」",
+    en:"“I heard someone calling.”",
+    avatar:"img/characters/heather.jpg",
+    voice:"audio/voice/heather_012.mp3"
+  },
+  {
+    chapter:"第一章：遺失的聲音 / Chapter 1: The Lost Voice",
+    bg:"img/storybeats/27_forest_gate.mp4",
+    name:"里特 Rit",
+    zh:"「霧越來越濃了，跟緊我。」",
+    en:"“The fog’s thickening. Stay close.”",
+    avatar:"img/characters/rit.jpg",
+    voice:"audio/voice/rit_027.mp3"
+  },
+  {
+    chapter:"",
+    bg:"img/storybeats/45_mirror_lake.mp4",
+    name:"艾薩克 Isaac",
+    zh:"「前面……那是逆轉之湖嗎？」",
+    en:"“Is that... the Lake of Reversal?”",
+    avatar:"img/characters/isaac.jpg",
+    voice:"audio/voice/isaac_045.mp3"
+  }
+];
+
+/* ========= 音樂控制 ========= */
+let i=0,bgToggle=false,bgmOn=true;
+const bgm=document.getElementById("bgm");
+const bgmBtn=document.getElementById("bgmBtn");
+const voice=document.getElementById("voice");
+
+bgmBtn.onclick=toggleBgm;
+document.addEventListener("click",()=>{if(bgm.paused)tryPlayBgm();},{once:true});
+tryPlayBgm();
+
+function toggleBgm(){
+  bgmOn=!bgmOn;
+  if(bgmOn){bgm.play();bgmBtn.textContent="🎵 BGM 開";}
+  else{bgm.pause();bgmBtn.textContent="🔇 BGM 關";}
+}
+function tryPlayBgm(){
+  bgm.volume=0.7;
+  bgm.play().catch(()=>{bgmBtn.textContent="🔈 點擊開啟音樂";});
+}
+
+/* ========= 切換場景 ========= */
+const bgVideos=[document.getElementById("bgVideo1"),document.getElementById("bgVideo2")];
+const bgImgs=[document.getElementById("bgImg1"),document.getElementById("bgImg2")];
+const nameEl=document.getElementById("name");
+const zhEl=document.getElementById("textZh");
+const enEl=document.getElementById("textEn");
+const btn=document.getElementById("btnNext");
+const avatar=document.getElementById("avatar");
+const avatarImg=avatar.querySelector("img");
+const title=document.getElementById("chapterTitle");
+
+btn.onclick=()=>next();
+window.addEventListener("keydown",e=>{if(e.key===" "||e.key==="ArrowRight")next();});
+showScene(0);
+
+function next(){i++;if(i>=STORY.length)i=0;showScene(i);}
+function showScene(n){
+  const s=STORY[n];
+  const isVideo = s.bg.endsWith(".mp4") || s.bg.endsWith(".webm");
+  const [aV,bV] = bgToggle ? bgVideos.reverse() : bgVideos;
+  const [aI,bI] = bgToggle ? bgImgs.reverse() : bgImgs;
+  [aV,aI,bV,bI].forEach(el=>{if(el)el.classList.remove("active");});
+
+  if(isVideo){
+    aV.src=s.bg; aV.load(); aV.play();
+    aV.classList.add("active");
+  }else{
+    aI.src=s.bg;
+    aI.classList.add("active");
+  }
+  bgToggle=!bgToggle;
+
+  nameEl.textContent=s.name||"";
+  zhEl.textContent=s.zh||"";
+  enEl.textContent=s.en||"";
+
+  if(s.avatar){avatarImg.src=s.avatar;avatar.classList.add("show");}
+  else{avatar.classList.remove("show");}
+
+  if(s.chapter){
+    title.textContent=s.chapter;
+    title.style.animation="none";void title.offsetWidth;title.style.animation="";
+  }else{title.textContent="";}
+
+  if(s.voice){
+    voice.src=s.voice;
+    voice.currentTime=0;
+    voice.play().catch(()=>{});
+  }
+}
+
+/* ========= 飄雪動畫 ========= */
+const canvas=document.getElementById("snowCanvas");
+const ctx=canvas.getContext("2d");
+let W,H,snows=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener("resize",resize);
+for(let i=0;i<150;i++){snows.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*3+1,d:Math.random()*1+0.5});}
+let angle=0;
+function drawSnow(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="rgba(180,200,255,0.9)";
+  ctx.beginPath();
+  for(const s of snows){ctx.moveTo(s.x,s.y);ctx.arc(s.x,s.y,s.r,0,Math.PI*2,true);}
+  ctx.fill();
+  updateSnow();
+}
+function updateSnow(){
+  angle+=0.001;
+  for(const s of snows){
+    s.y+=Math.cos(angle+s.d)+1+s.r/2;
+    s.x+=Math.sin(angle)*1;
+    if(s.y>H){s.y=0;s.x=Math.random()*W;}
+  }
+}
+setInterval(drawSnow,33);
+</script>
+</body>
+</html>

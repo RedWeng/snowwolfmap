@@ -1,0 +1,93 @@
+/* ============================================================
+   SnowWolf RPG FX Layer System v4.2
+   (Fixed Snow Visibility + True Blizzard)
+   ============================================================ */
+
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s ease;
+  z-index: 50; /* 提升層級在背景之上 */
+}
+.fx-show { opacity: 1; }
+
+/* === ❄️ 校門口：暴雪特效 === */
+#fx_snowstorm {
+  background: radial-gradient(circle at 50% 30%, rgba(180,220,255,0.15), transparent 70%);
+  overflow: visible;
+  z-index: 80; /* ❄️ 放最上層 */
+}
+.snowflake {
+  position: fixed;
+  top: -10px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.9;
+  filter: blur(1px);
+  animation: fall linear infinite;
+  will-change: transform;
+}
+@keyframes fall {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(100vh) translateX(var(--drift)) scale(0.7);
+    opacity: 0.4;
+  }
+}
+
+/* === 🔮 校長室：魔法光暈 === */
+#fx_spark {
+  background: radial-gradient(circle at 50% 50%, rgba(150,220,255,0.15), transparent 70%);
+  animation: magicPulse 6s ease-in-out infinite;
+  z-index: 60;
+  mix-blend-mode: screen;
+}
+@keyframes magicPulse {
+  0%,100% { filter: brightness(1); opacity: .4; }
+  50% { filter: brightness(2); opacity: .9; }
+}
+
+/* === 🌫 操場：濃霧 === */
+#fx_fog {
+  background: radial-gradient(circle at 50% 70%, rgba(200,220,240,0.4), transparent 80%);
+  filter: blur(20px);
+  animation: fogFloat 45s linear infinite;
+  z-index: 55;
+}
+@keyframes fogFloat {
+  0% { transform:translate(0,0); opacity:.5; }
+  50% { transform:translate(40px,20px); opacity:.7; }
+  100% { transform:translate(0,0); opacity:.5; }
+}
+
+/* === 📚 圖書館：漂浮光塵 === */
+#fx_dust {
+  background: radial-gradient(circle at 40% 40%, rgba(255,255,240,0.12), transparent 70%),
+              radial-gradient(circle at 70% 60%, rgba(150,200,255,0.1), transparent 70%);
+  animation: dustMove 30s linear infinite;
+  z-index: 55;
+}
+@keyframes dustMove {
+  0% { transform:translate(0,0); }
+  50% { transform:translate(20px,-20px); }
+  100% { transform:translate(0,0); }
+}
+
+/* === 🎨 美術教室：光波 === */
+#fx_paint {
+  background: radial-gradient(circle, rgba(230,250,255,0.25) 0%, transparent 80%);
+  animation: pulseWave 5s ease-in-out infinite;
+  z-index: 55;
+}
+@keyframes pulseWave {
+  0%,100% { transform:scale(1); opacity:.5; }
+  50% { transform:scale(1.5); opacity:.8; }
+}

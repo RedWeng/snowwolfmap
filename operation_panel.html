@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>❄ 雪狼任務基地｜Snow Wolf Operations Center</title>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: "Noto Sans TC", "Orbitron", sans-serif;
+  color: #cfe3ff;
+}
+
+/* ===== 背景影像層 ===== */
+#bgVideo, #bgImage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(0.85) saturate(1.2);
+}
+#bgImage { display: none; }
+
+/* ===== 冰霧層 ===== */
+#mistLayer {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(10,30,60,0.25), rgba(0,0,0,0.85));
+  backdrop-filter: blur(10px);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+/* ===== 飄雪層 ===== */
+#snowCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+/* ===== LOGO ===== */
+#logo {
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(160px, 14vw, 240px);
+  opacity: 1;
+  filter: drop-shadow(0 0 30px rgba(139,183,255,.9));
+  animation: logoPulse 3s ease-in-out infinite alternate;
+  z-index: 3;
+}
+@keyframes logoPulse {
+  0% { filter: drop-shadow(0 0 20px rgba(139,183,255,.7)); }
+  100% { filter: drop-shadow(0 0 50px rgba(139,183,255,1)); }
+}
+
+/* ===== 控制面板按鈕 ===== */
+#menu {
+  position: fixed;
+  top: 58%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  z-index: 5;
+}
+.menu-btn {
+  background: rgba(0,0,0,.6);
+  border: 1px solid rgba(139,183,255,.6);
+  color: #fff;
+  font-size: 16px;
+  padding: 10px 32px;
+  border-radius: 20px;
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(139,183,255,.9);
+  box-shadow: 0 0 15px rgba(139,183,255,.5);
+  letter-spacing: 0.1em;
+  transition: 0.25s;
+}
+.menu-btn:hover {
+  background: rgba(139,183,255,.15);
+  box-shadow: 0 0 25px rgba(139,183,255,1), 0 0 80px rgba(0,0,0,1);
+  transform: scale(1.05);
+}
+
+/* ===== 對話區塊 ===== */
+#dialogueBox {
+  position: fixed;
+  bottom: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  max-width: 900px;
+  min-height: 180px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(139,183,255,.5);
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(139,183,255,.5);
+  padding: 16px 24px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  cursor: pointer;
+}
+#dialogueBox:hover { box-shadow: 0 0 30px rgba(139,183,255,.8); }
+
+.dialogue-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(139,183,255,.9);
+  box-shadow: 0 0 18px rgba(139,183,255,.7);
+  flex-shrink: 0;
+}
+.dialogue-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dialogue-content {
+  flex: 1;
+  color: #e4ebff;
+  text-shadow: 0 0 8px rgba(0,0,0,.8);
+}
+.dialogue-name {
+  font-weight: 700;
+  font-size: 18px;
+  color: #9bccff;
+  text-shadow: 0 0 10px rgba(139,183,255,1);
+}
+.dialogue-text {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-top: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- ===== 背景 ===== -->
+<video id="bgVideo" src="video/operation_bg.mp4" autoplay muted loop playsinline></video>
+<img id="bgImage" src="img/ui/operation_bg.jpg" alt="Operation Background">
+<div id="mistLayer"></div>
+<canvas id="snowCanvas"></canvas>
+
+<!-- ===== LOGO ===== -->
+<img id="logo" src="img/ui/snowwolf_logo.png" alt="Snow Wolf Boy Logo">
+
+<!-- ===== 按鈕 ===== -->
+<div id="menu">
+  <button class="menu-btn" onclick="launch()">⚡ 進入戰鬥</button>
+  <button class="menu-btn" onclick="playComm()">📡 傳輸影像</button>
+  <button class="menu-btn" onclick="goBack()">⬅ 返回控制中心</button>
+</div>
+
+<!-- ===== 對話框 ===== -->
+<div id="dialogueBox">
+  <div class="dialogue-avatar"><img id="charAvatar" src="img/characters/rit.jpg" alt="角色頭像"></div>
+  <div class="dialogue-content">
+    <div class="dialogue-name" id="charName">里特</div>
+    <div class="dialogue-text" id="charLine">……啟動系統完成，我們準備好了。</div>
+  </div>
+</div>
+
+<!-- ===== 音樂 ===== -->
+<audio id="bgm" src="audio/bgm_operation.mp3" preload="auto" loop></audio>
+
+<script>
+/* ===== 音樂 ===== */
+const bgm = document.getElementById("bgm");
+document.addEventListener("click",()=>{
+  if(bgm.paused){
+    bgm.volume=0; bgm.play().catch(()=>{});
+    const fade=setInterval(()=>{
+      if(bgm.volume<0.9) bgm.volume+=0.03;
+      else clearInterval(fade);
+    },150);
+  }
+},{once:true});
+
+/* ===== 飄雪 ===== */
+const canvas=document.getElementById("snowCanvas");
+const ctx=canvas.getContext("2d");
+let W,H,snows=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener("resize",resize);
+for(let i=0;i<180;i++){snows.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*3+1,d:Math.random()*1+0.5});}
+let angle=0;
+function drawSnow(){
+ctx.clearRect(0,0,W,H);
+ctx.fillStyle="rgba(180,200,255,0.9)";
+ctx.beginPath();
+for(const s of snows){ctx.moveTo(s.x,s.y);ctx.arc(s.x,s.y,s.r,0,Math.PI*2,true);}
+ctx.fill();updateSnow();
+}
+function updateSnow(){
+angle+=0.001;
+for(const s of snows){s.y+=Math.cos(angle+s.d)+1+s.r/2;s.x+=Math.sin(angle)*1;if(s.y>H){s.y=0;s.x=Math.random()*W;}}
+}
+setInterval(drawSnow,33);
+
+/* ===== 對話控制 ===== */
+const dialogues = [
+  { name:"里特", avatar:"img/characters/rit.jpg", text:"啟動系統完成，我們準備好了。" },
+  { name:"海瑟", avatar:"img/characters/heather.jpg", text:"外面的雪暴比預期還強，感測器干擾值飆升！" },
+  { name:"迪恩", avatar:"img/characters/dean.jpg", text:"別慌，這種程度我還撐得住。只要里特別亂衝就行。" },
+  { name:"艾薩克", avatar:"img/characters/isaac.jpg", text:"……這片雪原有東西在動。不是風，也不是獸群。" },
+  { name:"海瑟", avatar:"img/characters/heather.jpg", text:"你是說……『牠』？" },
+  { name:"里特", avatar:"img/characters/rit.jpg", text:"不管是誰，今晚我們都不會退後。" },
+  { name:"艾薩克", avatar:"img/characters/isaac.jpg", text:"那就讓雪狼見證我們的選擇吧。任務開始。" },
+];
+let current=0;
+const charName=document.getElementById("charName");
+const charLine=document.getElementById("charLine");
+const charAvatar=document.getElementById("charAvatar");
+const dialogueBox=document.getElementById("dialogueBox");
+
+function showDialogue(){
+  const d=dialogues[current];
+  charName.textContent=d.name;
+  charLine.textContent=d.text;
+  charAvatar.src=d.avatar;
+  current=(current+1)%dialogues.length;
+}
+dialogueBox.addEventListener("click",showDialogue);
+
+/* ===== 按鈕導向 ===== */
+function launch(){window.location.href="combat_fullscreen.html";}
+function playComm(){window.location.href="character_comm_panel.html";}
+function goBack(){window.location.href="index.html";}
+</script>
+
+</body>
+</html>

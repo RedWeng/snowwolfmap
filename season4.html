@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>雪狼男孩｜第四季 古堡的詛咒</title>
+
+<style>
+* {
+  box-sizing:border-box;
+  font-family:"Noto Sans TC",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+}
+:root {
+  --panel-bg: rgba(15,18,28,0.6);
+  --panel-border: rgba(139,183,255,0.4);
+  --panel-glow: 0 0 30px rgba(120,180,255,0.4);
+  --text-dim: #9da5c7;
+  --text-soft: #cfd6ff;
+  --accent: #8bb7ff;
+  --accent-soft: rgba(139,183,255,0.18);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --bg-deep1: radial-gradient(circle at 50% 0%, rgba(60,60,80,0.25) 0%, rgba(10,10,20,0.95) 80%);
+  --bg-deep2: url("img/background/esports.jpg");
+}
+
+/* PAGE BACKGROUND (深色+能量暈光+粒子canvas位) */
+body {
+  margin:0;
+  color:#fff;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(60,60,80,0.25) 0%, rgba(10,10,20,0.95) 80%),
+    url("img/background/esports.jpg") center top / cover no-repeat fixed;
+  background-blend-mode:overlay;
+  position:relative;
+  overflow-x:hidden;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(140,180,255,.08) 0%,transparent 70%),
+    radial-gradient(circle at 80% 60%,rgba(255,120,200,.07) 0%,transparent 70%);
+  filter:blur(40px);
+  mix-blend-mode:screen;
+  opacity:.8;
+  z-index:2;
+}
+
+/* simple nav */
+.topnav {
+  position:relative;
+  z-index:5;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 24px;
+  color:#fff;
+  font-size:13px;
+  letter-spacing:.05em;
+  text-shadow:0 0 12px rgba(150,200,255,.6);
+}
+.topnav-left{
+  font-weight:600;
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+}
+.topnav-left .logo-main {
+  font-size:15px;
+  line-height:1.2;
+  color:#fff;
+}
+.topnav-left .logo-sub {
+  font-size:11px;
+  color:var(--accent);
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  letter-spacing:.12em;
+}
+.topnav-right a{
+  color:#fff;
+  text-decoration:none;
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:8px;
+  border:1px solid rgba(139,183,255,.4);
+  background:rgba(0,0,0,.4);
+  box-shadow:0 0 12px rgba(120,180,255,.5);
+  backdrop-filter:blur(6px);
+  transition:.18s;
+}
+.topnav-right a:hover{
+  background:rgba(139,183,255,.15);
+  box-shadow:0 0 20px rgba(139,183,255,.8);
+}
+
+/****************************************
+ * FRAME CONTAINER
+ ****************************************/
+section.frame {
+  position:relative;
+  margin:32px auto;
+  width:min(1400px,92%);
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--panel-glow),0 40px 80px rgba(0,0,0,.8);
+  padding:24px;
+  backdrop-filter:blur(10px);
+  z-index:4;
+  overflow:hidden;
+}
+.frame-header {
+  margin-bottom:16px;
+  position:relative;
+}
+.frame-header::before{
+  content:"";
+  position:absolute;
+  left:-8px;
+  top:-8px;
+  width:40px;
+  height:40px;
+  border-top:2px solid rgba(139,183,255,.6);
+  border-left:2px solid rgba(139,183,255,.6);
+  border-radius:4px 0 0 0;
+  box-shadow:0 0 12px rgba(139,183,255,.8);
+  opacity:.6;
+}
+.frame-eyebrow {
+  font-size:12px;
+  letter-spacing:.15em;
+  color:var(--accent);
+  text-transform:uppercase;
+  font-weight:600;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+}
+.frame-headline {
+  font-size:18px;
+  font-weight:600;
+  color:#fff;
+  text-shadow:0 0 10px rgba(150,200,255,.4);
+  margin-top:4px;
+}
+.frame-desc {
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text-dim);
+  margin-top:8px;
+  max-width:900px;
+  white-space:pre-line;
+}
+
+/****************************************
+ * HERO (季主視覺)
+ ****************************************/
+.hero-season4 {
+  position:relative;
+  min-height:60vh;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(0,0,20,0.0) 0%, rgba(0,0,0,0.7) 60%),
+    url("img/seasons/season4_key.jpg") center/cover no-repeat;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;
+  align-items:flex-end;
+  padding:40px 24px;
+  box-shadow:0 80px 120px rgba(0,0,0,.8);
+  overflow:hidden;
+  z-index:3;
+}
+.hero-season4::after{
+  /* 霧狀魔力+HUD掃描 */
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(140,180,255,.08) 0%,transparent 70%),
+    radial-gradient(circle at 80% 60%,rgba(255,120,200,.07) 0%,transparent 70%);
+  mix-blend-mode:screen;
+  filter:blur(40px);
+  opacity:.7;
+  pointer-events:none;
+}
+.hero-content {
+  position:relative;
+  max-width:800px;
+  z-index:2;
+}
+.s4-title {
+  font-size:clamp(24px,2vw,28px);
+  font-weight:600;
+  color:#fff;
+  text-shadow:
+    0 0 16px rgba(160,200,255,.6),
+    0 0 32px rgba(160,200,255,.4);
+  letter-spacing:.05em;
+}
+.s4-subtitle {
+  font-size:13px;
+  color:var(--text-soft);
+  line-height:1.5;
+  margin-top:8px;
+  text-shadow:0 0 8px rgba(0,0,0,.8);
+}
+.callout-grid {
+  margin-top:20px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+.s4-pill {
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--panel-border);
+  color:#fff;
+  font-size:12px;
+  padding:8px 12px;
+  border-radius:var(--radius-sm);
+  box-shadow:0 0 12px rgba(120,180,255,.5);
+  backdrop-filter:blur(6px);
+  line-height:1.4;
+  text-shadow:0 0 6px rgba(139,183,255,.7);
+}
+
+/****************************************
+ * GRID HELPERS
+ ****************************************/
+.grid-auto-card {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));
+  gap:16px;
+}
+
+.grid-auto-widecard {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+  gap:16px;
+}
+
+/****************************************
+ * GENERIC CARD (角色 / 勢力 / 道具 / EP)
+ ****************************************/
+.card-block {
+  position:relative;
+  background:rgba(10,12,20,.6);
+  border:1px solid rgba(139,183,255,.35);
+  border-radius:var(--radius-md);
+  box-shadow:
+    0 20px 40px rgba(0,0,0,.8),
+    0 0 24px rgba(120,180,255,.3);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:260px;
+  cursor:pointer;
+  transition:.2s;
+}
+.card-block:hover{
+  box-shadow:
+    0 0 24px rgba(150,200,255,.6),
+    0 30px 60px rgba(0,0,0,.9);
+  transform:translateY(-2px) scale(1.03);
+}
+.card-hud-corner{
+  position:absolute;
+  left:8px;
+  top:8px;
+  width:28px;
+  height:28px;
+  border-top:2px solid rgba(139,183,255,.6);
+  border-left:2px solid rgba(139,183,255,.6);
+  border-radius:4px 0 0 0;
+  box-shadow:0 0 12px rgba(139,183,255,.8);
+  opacity:.5;
+  pointer-events:none;
+}
+
+.card-img{
+  position:relative;
+  aspect-ratio:16/9;
+  background:#000;
+  overflow:hidden;
+}
+.card-img img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.card-img::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(180,200,255,.15) 0%,transparent 60%),
+    linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 100%);
+  mix-blend-mode:screen;
+}
+
+.card-body{
+  padding:12px 14px 16px;
+  font-size:13px;
+  line-height:1.5;
+  color:#ccc;
+  position:relative;
+}
+.card-name{
+  color:#fff;
+  font-size:15px;
+  font-weight:600;
+  margin-bottom:4px;
+  text-shadow:0 0 8px rgba(150,200,255,.6);
+}
+.card-role{
+  font-size:12px;
+  color:var(--accent);
+  margin-bottom:8px;
+  letter-spacing:.05em;
+  white-space:pre-line;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+}
+.card-desc{
+  font-size:13px;
+  line-height:1.5;
+  color:#ccc;
+}
+
+/****************************************
+ * SECTION TITLES INSIDE FRAME
+ ****************************************/
+.sub-block-label {
+  font-size:14px;
+  font-weight:600;
+  color:#fff;
+  text-shadow:0 0 8px rgba(150,200,255,.5);
+  margin:24px 0 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.sub-block-label::after{
+  content:"";
+  flex:1;
+  min-width:40px;
+  height:1px;
+  background:linear-gradient(
+    to right,
+    rgba(139,183,255,.6) 0%,
+    rgba(0,0,0,0) 80%
+  );
+  box-shadow:0 0 8px rgba(139,183,255,.6);
+  opacity:.6;
+}
+
+/****************************************
+ * FOOTER / CREDITS
+ ****************************************/
+.footer-wrap{
+  font-size:12px;
+  color:#999;
+  line-height:1.6;
+  text-align:center;
+  padding:40px 24px 80px;
+  text-shadow:0 0 8px rgba(0,0,0,.9),0 0 16px rgba(139,183,255,.4);
+}
+.footer-head{
+  font-size:13px;
+  font-weight:600;
+  color:#fff;
+  text-shadow:0 0 10px rgba(150,200,255,.6);
+  margin-bottom:8px;
+  letter-spacing:.08em;
+}
+.footer-row{
+  color:#9da5c7;
+  margin-bottom:4px;
+}
+.footer-row strong{
+  color:#fff;
+  text-shadow:0 0 6px rgba(139,183,255,.8);
+  font-weight:500;
+}
+
+/****************************************
+ * MODAL (點卡片放大用，預留)
+ ****************************************/
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:16px;
+}
+.modal-wrap{
+  background:rgba(10,12,20,.8);
+  border:1px solid rgba(139,183,255,.5);
+  border-radius:var(--radius-lg);
+  box-shadow:0 0 30px rgba(120,180,255,.7),0 40px 80px rgba(0,0,0,.9);
+  max-width:min(400px,90%);
+  width:100%;
+  color:#fff;
+  position:relative;
+  backdrop-filter: blur(10px);
+  padding-bottom:16px;
+  overflow:hidden;
+}
+.modal-wrap::before{
+  content:"";
+  position:absolute;
+  left:12px;
+  top:12px;
+  width:32px;
+  height:32px;
+  border-top:2px solid rgba(139,183,255,.8);
+  border-left:2px solid rgba(139,183,255,.8);
+  border-radius:4px 0 0 0;
+  box-shadow:0 0 12px rgba(139,183,255,.8);
+}
+.modal-close{
+  position:absolute;
+  right:12px;
+  top:12px;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(139,183,255,.6);
+  color:#fff;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:var(--radius-sm);
+  cursor:pointer;
+  box-shadow:0 0 12px rgba(120,180,255,.6);
+}
+.modal-img{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+.modal-img img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.modal-img::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(200,220,255,.15) 0%,transparent 60%),
+    linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.7) 100%);
+  mix-blend-mode:screen;
+}
+.modal-body{
+  padding:16px;
+  font-size:13px;
+  line-height:1.5;
+  color:#ccc;
+}
+.modal-name{
+  font-size:16px;
+  font-weight:600;
+  color:#fff;
+  text-shadow:0 0 8px rgba(150,200,255,.8);
+  margin-bottom:4px;
+}
+.modal-role{
+  font-size:12px;
+  color:var(--accent);
+  letter-spacing:.05em;
+  line-height:1.5;
+  white-space:pre-line;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  margin-bottom:8px;
+}
+.modal-desc{
+  font-size:13px;
+  line-height:1.6;
+  color:#ccc;
+  white-space:pre-line;
+  margin-bottom:12px;
+}
+
+/****************************************
+ * RESPONSIVE TWEAKS
+ ****************************************/
+@media (max-width:600px){
+  .topnav{
+    flex-direction:column;
+    gap:12px;
+    text-align:center;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="topnav">
+  <div class="topnav-left">
+    <div class="logo-main">雪狼男孩 Snow Wolf Boy</div>
+    <div class="logo-sub">SEASON 4 // 古堡的詛咒</div>
+  </div>
+  <div class="topnav-right">
+    <a href="index.html">回到世界入口</a>
+  </div>
+</header>
+
+<!-- HERO / KEY ART -->
+<section class="hero-season4">
+  <div class="hero-content">
+    <div class="s4-title">第四季｜古堡的詛咒</div>
+    <div class="s4-subtitle">
+      當黑暗不是敵人，而是被封印太久的真相。  
+      沒有人再是「孩子」了，但他們還沒打算長大成壞人。
+    </div>
+
+    <div class="callout-grid">
+      <div class="s4-pill">眼淚不是珍珠，眼淚就是眼淚。</div>
+      <div class="s4-pill">別碰那扇門，那不是門，那是求救。</div>
+      <div class="s4-pill">勇氣不是不怕，是怕到發抖還往前。</div>
+    </div>
+  </div>
+</section>
+
+<!-- EPISODES -->
+<section class="frame">
+  <div class="frame-header">
+    <div class="frame-eyebrow">EPISODES</div>
+    <div class="frame-headline">第四季分集（古堡篇）</div>
+    <div class="frame-desc">
+      一切都收束在古堡，但古堡本身也在崩解。  
+      以下是第四季前 8 集，依序揭露詛咒的來源、內部背叛、以及最後誰被犧牲。
+    </div>
+  </div>
+
+  <div id="s4Episodes" class="grid-auto-card"></div>
+</section>
+
+<!-- NEW CHARACTERS -->
+<section class="frame">
+  <div class="frame-header">
+    <div class="frame-eyebrow">NEW FACES</div>
+    <div class="frame-headline">第四季新角色</div>
+    <div class="frame-desc">
+      有些人是盟友，有些人看起來像敵人，  
+      但真信用誰救你，很常是最後一秒才知道。
+    </div>
+  </div>
+
+  <div id="s4Chars" class="grid-auto-widecard"></div>
+</section>
+
+<!-- FACTIONS / 陣營 -->
+<section class="frame">
+  <div class="frame-header">
+    <div class="frame-eyebrow">FACTIONS</div>
+    <div class="frame-headline">現在世界已經不是「大人 vs 小孩」這麼簡單</div>
+    <div class="frame-desc">
+      每一個陣營都想保護「自己的未來」。問題是，誰的未來會被保留下來？
+    </div>
+  </div>
+
+  <div id="factionGrid" class="grid-auto-widecard"></div>
+</section>
+
+<!-- WOLF LINES / 狼族血脈 -->
+<section class="frame">
+  <div class="frame-header">
+    <div class="frame-eyebrow">WOLF LINEAGE</div>
+    <div class="frame-headline">狼族的三條血脈</div>
+    <div class="frame-desc">
+      狼族不是單一族群，而是三條分歧的「怎麼活下來」的哲學。  
+      他們的爭執，最後會決定整片森林要不要存在。
+    </div>
+  </div>
+
+  <div id="wolfGrid" class="grid-auto-card"></div>
+</section>
+
+<!-- RELICS / 道具 & 咒術 -->
+<section class="frame">
+  <div class="frame-header">
+    <div class="frame-eyebrow">RELICS & SPELLS</div>
+    <div class="frame-headline">詛咒時代的道具 / 禁術</div>
+    <div class="frame-desc">
+      這不是炫耀型神器。這些東西都是「救不回來時的最後一招」。
+    </div>
+  </div>
+
+  <div id="relicGrid" class="grid-auto-card"></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer-wrap">
+  <div class="footer-head">CREDITS / 製作名單</div>
+  <div class="footer-row"><strong>原創世界觀</strong>｜雪狼男孩 Snow Wolf Boy Project</div>
+  <div class="footer-row"><strong>劇情統籌</strong>｜穆高爾森林工作小隊</div>
+  <div class="footer-row"><strong>角色 / 美術氛圍開發</strong>｜孩子們 / 狼族 / 迷霧鎮</div>
+  <div class="footer-row"><strong>世界宣言</strong>｜「森林記得一切，只要你敢回來面對。」</div>
+  <div class="footer-row" style="margin-top:12px; color:#666;">
+    Business / 合作 / 授權 / Merch：<br>
+    contact@snowwolf.example
+  </div>
+</footer>
+
+<!-- MODAL (for future enlarge card / not yet wired) -->
+<div class="modal-backdrop" id="modalBack">
+  <div class="modal-wrap">
+    <button class="modal-close" id="modalClose">CLOSE ✕</button>
+    <div class="modal-img">
+      <img id="modalImg" src="" alt="">
+    </div>
+    <div class="modal-body">
+      <div class="modal-name" id="modalName"></div>
+      <div class="modal-role" id="modalRole"></div>
+      <div class="modal-desc" id="modalDesc"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   DATA ZONE
+   You can tweak text / images here 🔽
+   ========================================================= */
+
+/* 1. Episodes (Season 4 - 8+集) */
+const s4EpisodesData = [
+  {
+    title:"01 古堡開眼",
+    role:"詛咒甦醒",
+    desc:"古堡內的封印開始出現裂痕，牆面流出黑色光脈。孩子們發現：『這不是遺跡，是活體。』",
+    img:"img/episodes/s4_ep1.jpg"
+  },
+  {
+    title:"02 夜半的請求",
+    role:"月影的警告",
+    desc:"月影要求所有人離開古堡——不是為了保護他們，而是怕他自己再也壓不住那股東西。",
+    img:"img/episodes/s4_ep2.jpg"
+  },
+  {
+    title:"03 狼族審判",
+    role:"血脈對決",
+    desc:"三條狼族血脈第一次正面對抗，誰能代表狼族講話，將決定人類陣線要不要撤軍。",
+    img:"img/episodes/s4_ep3.jpg"
+  },
+  {
+    title:"04 迷霧鎮最後的安全屋",
+    role:"撤離計畫",
+    desc:"迷霧鎮被點名成『庇護罪』。托歐比和瑪琳絲必須決定：繼續藏孩子，還是讓他們去戰場。",
+    img:"img/episodes/s4_ep4.jpg"
+  },
+  {
+    title:"05 沒有人可以死",
+    role:"團隊誓言",
+    desc:"里特、海瑟、迪恩、菲亞、賽德：他們訂下一個規則——『任何一個人死掉，這場戰就不算贏。』",
+    img:"img/episodes/s4_ep5.jpg"
+  },
+  {
+    title:"06 鐵甲巨獸突破口",
+    role:"反擊開始",
+    desc:"希恩博士找到鐵甲巨獸裝甲的能量接口。這是第一次，人類不是逃，而是正面砍回去。",
+    img:"img/episodes/s4_ep6.jpg"
+  },
+  {
+    title:"07 穆林坦娜的選擇",
+    role:"犧牲前夜",
+    desc:"里特發現，媽媽不是永遠都能留在他身邊。她也不是無敵的。她只是一直在撐而已。",
+    img:"img/episodes/s4_ep7.jpg"
+  },
+  {
+    title:"08 古堡的詛咒",
+    role:"墜落或重生",
+    desc:"詛咒不是要毀滅森林，而是要把整片森林『帶走』。所有人都被迫面對：我們到底要不要放手？",
+    img:"img/episodes/s4_ep8.jpg"
+  }
+];
+
+/* 2. Season 4 new characters (8 slots) */
+const s4Characters = [
+  {
+    name:"月影 Moonshadow",
+    role:"古堡守門人 / 黑暗術式持有者",
+    desc:"他守的不是寶藏，而是一個不能被釋放的名字。外表冷漠，但站在孩子們這邊到失控。",
+    img:"img/characters_s4/moonshadow.jpg"
+  },
+  {
+    name:"莉亞 Lia",
+    role:"偽裝成轉學生的偵查員",
+    desc:"外表像普通小孩，實際上在監看蘭薩爾小學和迷霧鎮的動態。她不確定自己到底算哪一邊。",
+    img:"img/characters_s4/lia.jpg"
+  },
+  {
+    name:"修特 Shute",
+    role:"鐵甲巨獸改造兵 / 叛逃者",
+    desc:"他本來是鐵甲巨獸軍團的一部分，被植入金屬脊柱。逃出來之後，他只想一件事：別再讓下一個小孩被抓走。",
+    img:"img/characters_s4/shute.jpg"
+  },
+  {
+    name:"白鴉 White Raven",
+    role:"情報走私者",
+    desc:"會在樹梢、屋頂、廢樓邊留下紙條。沒有人看過他的臉，但孩子們知道：他一直在保護他們的路線不被發現。",
+    img:"img/characters_s4/whiteraven.jpg"
+  },
+  {
+    name:"長老（暴走形態）",
+    role:"失控的守護者",
+    desc:"他開始不分敵我，只想『保住族群』，哪怕要毀掉整座城。他的痛正式變成了大家的危險。",
+    img:"img/characters_s4/elder_rage.jpg"
+  },
+  {
+    name:"莉亞的上級『鐘鳴者』",
+    role:"無臉指揮者",
+    desc:"用聲音下指令。沒有人知道她在哪裡，卻能同時干擾好幾個地點的行動。她說的話沒有情緒，像機器。",
+    img:"img/characters_s4/bellcaller.jpg"
+  },
+  {
+    name:"奇諾 Chino",
+    role:"迷霧鎮魔法道具店老闆",
+    desc:"他說他是生意人，但他一直在偷偷武裝小孩。第四季開始，他把『真的會爆炸』的東西拿出來了。",
+    img:"img/characters_s4/chino_s4.jpg"
+  },
+  {
+    name:"里特 Rit（第四季狀態）",
+    role:"小隊臨時指揮",
+    desc:"沒有人正式任命他，但所有人開始自動等他點頭才動。這是他第一次覺得：原來『帶頭』也會害怕。",
+    img:"img/characters_s4/rit_s4.jpg"
+  }
+];
+
+/* 3. Factions / 陣營（都可以放圖） */
+const factionsData = [
+  {
+    name:"孩子小隊",
+    role:"里特 / 海瑟 / 迪恩 / 菲亞 / 賽德 …",
+    desc:"宣言：『沒有人可以死。』 他們的戰術不是擊倒，而是救回。整個世界第一次以他們為中心運轉，而不是把他們當「需要被保護的人」。",
+    img:"img/factions/kids_squad.jpg"
+  },
+  {
+    name:"狼族血脈聯盟",
+    role:"三條狼族分支的臨時停戰",
+    desc:"他們不是因為想合作，而是因為如果再內鬥，整個森林會在一週內滅掉。這是前所未見的讓步。",
+    img:"img/factions/wolf_alliance.jpg"
+  },
+  {
+    name:"鐵甲巨獸軍團",
+    role:"卡達爾 / 重裝傭兵 / 半機械獸",
+    desc:"目標是奪走森林內的魔法能量本身，把大自然變成武器。他們相信「贏」不需要理由，只需要資源。",
+    img:"img/factions/iron_beasts.jpg"
+  },
+  {
+    name:"古堡守門線",
+    role:"月影 + 留在古堡裡的那群人",
+    desc:"他們的工作就是「讓詛咒繼續被關住」，即使代價是被世人當怪物。第四季裡，這個結構開始崩壞。",
+    img:"img/factions/fortress_watch.jpg"
+  }
+];
+
+/* 4. 狼族血脈 (三大支線) */
+const wolfLines = [
+  {
+    name:"月嚎血脈",
+    role:"守護者式傳統派",
+    desc:"信念：『我們保護森林，森林保護我們。』  
+但他們的保護方式非常激烈，包含先發制人的獵殺。",
+    img:"img/wolves/moonhowl.jpg"
+  },
+  {
+    name:"雪痕血脈",
+    role:"流亡派",
+    desc:"他們相信森林已經無法安全，唯一的活路是帶著孩子遠走，哪怕失去身份、失去名字。",
+    img:"img/wolves/snowscar.jpg"
+  },
+  {
+    name:"暗影血脈",
+    role:"潛入與滲透派",
+    desc:"任務型，不在乎人類是否『無辜』。  
+他們覺得：如果你站在獵人的身邊，你就是獵人。",
+    img:"img/wolves/shadowline.jpg"
+  }
+];
+
+/* 5. Relics / Spells 本季特別道具 */
+const relicsData = [
+  {
+    name:"封鎖環陣",
+    role:"空間固定 / 反傳送",
+    desc:"月影在古堡下層手繪的術式。打開後，任何東西『進得來，出不去』，包括恐懼。",
+    img:"img/relics/seal_ring.jpg"
+  },
+  {
+    name:"時間回溯藥劑・重製版",
+    role:"艾希爾系統 / 高危險",
+    desc:"新版本能同時看『兩個人』的足跡，但使用者的視覺和記憶會永久混線，可能再也分不清現在。",
+    img:"img/relics/time_serum_v2.jpg"
+  },
+  {
+    name:"巨獸脊柱干擾器",
+    role:"希恩博士自製",
+    desc:"專門干擾鐵甲巨獸背部核心，讓裝甲『暫時忘記自己要攻擊誰』。很像黑客，但用螺絲起子做成的。",
+    img:"img/relics/spine_jammer.jpg"
+  },
+  {
+    name:"守門人之燈",
+    role:"古堡核心遺物",
+    desc:"月影不肯交給任何人。傳說這盞燈不是照亮房間，而是照亮人心裡的謊話。",
+    img:"img/relics/gatekeepers_lantern.jpg"
+  }
+];
+
+/* =========================================================
+   DOM HOOKS
+   ========================================================= */
+const s4EpisodesEl = document.getElementById("s4Episodes");
+const s4CharsEl    = document.getElementById("s4Chars");
+const factionEl    = document.getElementById("factionGrid");
+const wolfEl       = document.getElementById("wolfGrid");
+const relicEl      = document.getElementById("relicGrid");
+
+/* modal nodes */
+const modalBack  = document.getElementById("modalBack");
+const modalClose = document.getElementById("modalClose");
+const modalImg   = document.getElementById("modalImg");
+const modalName  = document.getElementById("modalName");
+const modalRole  = document.getElementById("modalRole");
+const modalDesc  = document.getElementById("modalDesc");
+
+/* =========================================================
+   RENDER HELPERS
+   ========================================================= */
+function createCard(data){
+  const card = document.createElement("div");
+  card.className = "card-block";
+  card.innerHTML = `
+    <div class="card-hud-corner"></div>
+    <div class="card-img">
+      <img src="${data.img}" alt="${data.name || data.title}">
+    </div>
+    <div class="card-body">
+      <div class="card-name">${data.name || data.title}</div>
+      <div class="card-role">${data.role || ""}</div>
+      <div class="card-desc">${data.desc || ""}</div>
+    </div>
+  `;
+
+  card.addEventListener("click", ()=>{
+    openModal({
+      img:data.img,
+      name:data.name || data.title,
+      role:data.role || "",
+      desc:data.desc || ""
+    });
+  });
+
+  return card;
+}
+
+function renderListTo(list, container){
+  container.innerHTML = "";
+  list.forEach(item=>{
+    container.appendChild(createCard(item));
+  });
+}
+
+/* =========================================================
+   MODAL CONTROL
+   ========================================================= */
+function openModal(obj){
+  modalImg.src   = obj.img;
+  modalName.textContent = obj.name;
+  modalRole.textContent = obj.role;
+  modalDesc.textContent = obj.desc;
+  modalBack.style.display = "flex";
+}
+function closeModal(){
+  modalBack.style.display = "none";
+}
+modalClose.addEventListener("click", closeModal);
+modalBack.addEventListener("click",(e)=>{
+  if(e.target===modalBack) closeModal();
+});
+
+/* =========================================================
+   INIT RENDER
+   ========================================================= */
+renderListTo(s4EpisodesData, s4EpisodesEl);
+renderListTo(s4Characters,  s4CharsEl);
+renderListTo(factionsData,  factionEl);
+renderListTo(wolfLines,     wolfEl);
+renderListTo(relicsData,    relicEl);
+
+/* =========================================================
+   EXTRA FX: subtle drifting scanlines / energy fog
+   We'll do a canvas shimmer overlay for bonus esports vibe.
+   ========================================================= */
+(function energyFog(){
+  const c = document.createElement("canvas");
+  c.style.position="fixed";
+  c.style.inset="0";
+  c.style.pointerEvents="none";
+  c.style.zIndex="1"; /* sits under body::before (2) but above bg */
+  c.id="energyFogLayer";
+  document.body.appendChild(c);
+
+  const ctx = c.getContext("2d");
+  let w, h, t=0;
+
+  function resize(){
+    w = c.width  = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+
+    // faint moving diagonal lines / scanlines
+    ctx.globalAlpha = 0.07;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(139,183,255,0.4)";
+    const gap = 30;
+    const offset = (t*0.5)%gap;
+    for(let x=-200; x<w+200; x+=gap){
+      ctx.beginPath();
+      ctx.moveTo(x+offset,0);
+      ctx.lineTo(x+offset+200,h);
+      ctx.stroke();
+    }
+
+    // soft pulse blobs
+    ctx.globalAlpha = 0.08;
+    const grd = ctx.createRadialGradient(
+      w*0.3+Math.sin(t*0.002)*40,
+      h*0.7+Math.cos(t*0.0025)*40,
+      0,
+      w*0.3,
+      h*0.7,
+      Math.max(w,h)*0.6
+    );
+    grd.addColorStop(0,"rgba(120,180,255,0.4)");
+    grd.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,w,h);
+
+    t+=16;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
+</body>
+</html>

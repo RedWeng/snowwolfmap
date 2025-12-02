@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>作戰介面 // Snow Wolf Ops</title>
+
+<style>
+  * {
+    box-sizing:border-box;
+    font-family:"Noto Sans TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  :root {
+    --accent:#8bb7ff;
+    --accentGlow:rgba(139,183,255,.8);
+    --hpGreen:#6dffa3;
+    --stressRed:#ff4f7d;
+    --panelBg:rgba(0,0,0,.45);
+    --panelBorder:rgba(139,183,255,.5);
+    --panelShadow:0 0 24px rgba(139,183,255,.8),0 60px 120px rgba(0,0,0,.9);
+    --radius-md:12px;
+    --radius-lg:18px;
+  }
+
+  body {
+    margin:0;
+    min-height:100vh;
+    background:#000;
+    color:#fff;
+    overflow:hidden;
+    position:relative;
+    font-size:14px;
+  }
+
+  /* ===== 背景場景 ===== */
+  .bg-wrapper {
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    z-index:0;
+  }
+  .bg-scene {
+    position:absolute;
+    inset:0;
+    background:#000 url("img/combat/bg_mirrorlake.jpg") center/cover no-repeat;
+    filter: brightness(1.1) contrast(1.05) saturate(1.2);
+  }
+  .bg-overlay-grad {
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 30%, rgba(40,60,120,.25) 0%, rgba(0,0,0,.7) 70%);
+    pointer-events:none;
+  }
+  .scanline {
+    position:absolute;
+    left:0;right:0;
+    height:2px;
+    background:radial-gradient(circle at 50% 50%, rgba(139,183,255,.8) 0%, rgba(139,183,255,0) 70%);
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    filter:drop-shadow(0 0 6px rgba(139,183,255,.8));
+    opacity:.3;
+    mix-blend-mode:screen;
+    pointer-events:none;
+    animation:scanDown 4s linear infinite;
+  }
+  @keyframes scanDown {
+    0%{ top:0%; }
+    100%{ top:100%; }
+  }
+  .fxCanvas {
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+  }
+
+  /* ===== 左上：任務目標 ===== */
+  .objective-panel {
+    position:fixed;
+    left:12px;
+    top:12px;
+    max-width:260px;
+    background:var(--panelBg);
+    border:1px solid var(--panelBorder);
+    border-radius:var(--radius-md);
+    box-shadow:var(--panelShadow);
+    padding:12px;
+    font-size:12px;
+    line-height:1.5;
+    color:#fff;
+    backdrop-filter: blur(8px) brightness(1.2);
+    z-index:5;
+  }
+  .objective-title {
+    font-size:11px;
+    font-weight:600;
+    color:var(--accent);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px var(--accentGlow);
+    margin-bottom:6px;
+  }
+  .objective-flag {
+    margin-top:8px;
+    color:#ff4f7d;
+    font-size:11px;
+    line-height:1.4;
+    text-shadow:0 0 8px var(--stressRed),0 0 16px rgba(255,0,80,.7);
+  }
+
+  /* ===== 右上：Threat Monitor / 雷達圖 ===== */
+  .threat-panel {
+    position:fixed;
+    top:12px;
+    right:12px;
+    width:260px;
+    background:var(--panelBg);
+    border:1px solid var(--panelBorder);
+    border-radius:var(--radius-md);
+    box-shadow:var(--panelShadow);
+    padding:12px;
+    color:#fff;
+    font-size:12px;
+    line-height:1.4;
+    backdrop-filter: blur(8px) brightness(1.2);
+    z-index:5;
+  }
+  .threat-title {
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.15em;
+    color:#ff4f7d;
+    text-shadow:0 0 8px var(--stressRed),0 0 16px rgba(255,0,80,.6);
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+
+  .threat-active-name {
+    font-size:12px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(255,255,255,.8);
+    margin-bottom:4px;
+  }
+  .threat-active-role {
+    font-size:11px;
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    margin-bottom:8px;
+  }
+
+  .radar-zone {
+    position:relative;
+    width:100%;
+    background:rgba(0,0,0,.4);
+    border:1px solid rgba(139,183,255,.4);
+    border-radius:8px;
+    box-shadow:0 0 16px rgba(139,183,255,.5),0 20px 40px rgba(0,0,0,.9);
+    padding:8px;
+  }
+
+  .radar-wrapper {
+    position:relative;
+    width:200px;
+    height:200px;
+    margin:0 auto;
+  }
+
+  canvas.radar-canvas {
+    position:absolute;
+    left:0;
+    top:0;
+    width:200px;
+    height:200px;
+  }
+
+  /* 五個角上的 label */
+  .radar-label {
+    position:absolute;
+    font-size:10px;
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  /* 將5個標籤大約擺在多邊形頂點外圍 */
+/* 五個角上的 label：依照目前畫面手動微調版 */
+.lbl-0 { /* 壓力場 (上方) */
+  position:absolute;
+  left:50%;
+  top:8px;
+  transform:translateX(-50%);
+  font-size:10px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  white-space:nowrap;
+  pointer-events:none;
+  text-align:center;
+}
+
+.lbl-1 { /* 可視度 (右上) */
+  position:absolute;
+  right:18px;
+  top:32px;
+  font-size:10px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  white-space:nowrap;
+  pointer-events:none;
+  text-align:left;
+}
+
+.lbl-2 { /* 敵方數量 (右下) */
+  position:absolute;
+  right:12px;
+  bottom:32px;
+  font-size:10px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  white-space:nowrap;
+  pointer-events:none;
+  text-align:left;
+}
+
+.lbl-3 { /* 地形風險 (下方) */
+  position:absolute;
+  left:23px;
+  bottom:24px;
+  transform:translateX(-50%);
+  font-size:10px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  white-space:nowrap;
+  pointer-events:none;
+  text-align:center;
+}
+
+.lbl-4 { /* 隊伍穩定 (左上) */
+  position:absolute;
+  left:18px;
+  top:32px;
+  font-size:10px;
+  color:#8bb7ff;
+  text-shadow:0 0 8px rgba(139,183,255,.8);
+  white-space:nowrap;
+  pointer-events:none;
+  text-align:right;
+}
+
+
+  .threat-buttons {
+    margin-top:12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .small-btn {
+    font-size:11px;
+    line-height:1.4;
+    color:#fff;
+    background:rgba(0,0,0,.6);
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:6px;
+    box-shadow:0 0 16px rgba(139,183,255,.6),0 20px 40px rgba(0,0,0,.9);
+    padding:8px;
+    text-align:center;
+    text-shadow:0 0 12px rgba(150,200,255,.8);
+    cursor:pointer;
+    transition:.15s;
+    user-select:none;
+  }
+  .small-btn:hover {
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 24px rgba(150,200,255,1),0 40px 80px rgba(0,0,0,1);
+  }
+
+  /* ===== 小隊角色卡 ===== */
+  .unit-card {
+    position:absolute;
+    width:260px;
+    background:linear-gradient(180deg, rgba(20,30,60,0.6) 0%, rgba(0,0,0,0.7) 100%);
+    border:1px solid rgba(139,183,255,.8);
+    border-radius:var(--radius-md);
+    box-shadow:0 0 24px rgba(139,183,255,.9),0 60px 120px rgba(0,0,0,.8);
+    padding:12px 14px;
+    font-size:12px;
+    line-height:1.4;
+    color:#fff;
+    backdrop-filter: blur(6px) brightness(1.25);
+    cursor:pointer;
+    transition:.2s;
+  }
+  .unit-card:hover {
+    box-shadow:0 0 32px rgba(150,200,255,1),0 80px 160px rgba(0,0,0,1);
+    transform:translateY(-2px) scale(1.03);
+  }
+
+  .unit-headrow {
+    display:flex;
+    align-items:flex-start;
+    margin-bottom:8px;
+    gap:8px;
+  }
+
+  .unit-portrait {
+    width:40px;
+    height:40px;
+    flex-shrink:0;
+    border-radius:6px;
+    overflow:hidden;
+    border:1px solid rgba(139,183,255,.8);
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    background:#000;
+  }
+  .unit-portrait img {
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+
+  .unit-meta {
+    flex:1;
+  }
+  .unit-name {
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(255,255,255,.8);
+    font-size:12px;
+  }
+  .unit-role {
+    font-size:11px;
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    line-height:1.4;
+  }
+
+  .bar-block {
+    margin-top:6px;
+  }
+  .bar-label {
+    font-size:11px;
+    font-weight:500;
+    line-height:1.3;
+  }
+  .hp-label {
+    color:var(--hpGreen);
+    text-shadow:0 0 8px rgba(109,255,163,.8);
+  }
+  .stress-label {
+    color:var(--stressRed);
+    text-shadow:0 0 8px rgba(255,79,125,.8);
+  }
+
+  .hp-bar,
+  .stress-bar {
+    position:relative;
+    width:100%;
+    height:6px;
+    background:rgba(255,255,255,.07);
+    border-radius:4px;
+    margin-top:2px;
+    box-shadow:0 0 10px rgba(0,0,0,.8);
+  }
+  .hp-fill {
+    position:absolute;
+    left:0; top:0; bottom:0;
+    background:linear-gradient(90deg,#1aff7a 0%,#6dffa3 100%);
+    box-shadow:0 0 8px rgba(109,255,163,.9);
+    border-radius:4px;
+  }
+  .stress-fill {
+    position:absolute;
+    left:0; top:0; bottom:0;
+    background:linear-gradient(90deg,#ff003c 0%,#ff4f7d 100%);
+    box-shadow:0 0 8px rgba(255,79,125,.9);
+    border-radius:4px;
+  }
+
+  /* 角色卡定位 (調整避免壓到左下訊息) */
+  .unit-heather { left:35%; top:140px; transform:translateX(-50%); }
+  .unit-isaac   { right:290px; top:200px; }
+  .unit-rit     { left:180px; bottom:240px; }
+  .unit-dean    { left:50%; bottom:140px; transform:translateX(-50%); }
+
+  /* ===== COMM / 角色語音字幕 ===== */
+  .comm-panel {
+    position:fixed;
+    left:12px;
+    bottom:36px;
+    max-width:380px;
+    min-height:70px;
+    background:var(--panelBg);
+    border:1px solid var(--panelBorder);
+    border-radius:var(--radius-md);
+    box-shadow:var(--panelShadow);
+    padding:12px;
+    color:#fff;
+    line-height:1.5;
+    font-size:12px;
+    backdrop-filter: blur(8px) brightness(1.2);
+    z-index:4;
+  }
+
+  .comm-line {
+    font-size:12px;
+    color:#cfd6ff;
+    text-shadow:0 0 8px rgba(0,0,0,.9);
+    white-space:pre-line;
+  }
+  .comm-speaker {
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(255,255,255,.8);
+  }
+  .comm-role {
+    font-size:11px;
+    color:#8bb7ff;
+    margin-left:4px;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+
+  /* ===== 戰術按鈕列 ===== */
+  .actions-row {
+    position:fixed;
+    left:50%;
+    bottom:36px;
+    transform:translateX(-50%);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:12px;
+    z-index:3;
+  }
+
+  .tac-btn {
+    min-width:140px;
+    background:rgba(0,0,0,.6);
+    border:1px solid var(--panelBorder);
+    border-radius:var(--radius-lg);
+    padding:12px 14px;
+    text-align:center;
+    color:#fff;
+    cursor:pointer;
+    font-size:12px;
+    line-height:1.4;
+    box-shadow:0 0 24px rgba(139,183,255,.8),0 60px 120px rgba(0,0,0,.9);
+    text-shadow:0 0 12px rgba(150,200,255,.8);
+    backdrop-filter: blur(6px) brightness(1.2);
+    transition:.18s;
+  }
+  .tac-btn:hover {
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 32px rgba(150,200,255,1),0 80px 160px rgba(0,0,0,1);
+    transform:translateY(-2px) scale(1.03);
+  }
+  .tac-main {
+    font-size:13px;
+    font-weight:600;
+    color:#fff;
+    letter-spacing:.03em;
+  }
+  .tac-sub {
+    font-size:11px;
+    color:#8bb7ff;
+  }
+
+  /* ===== 右下：BGM & 返回 ===== */
+  .footer-ctl {
+    position:fixed;
+    right:12px;
+    bottom:20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    z-index:5;
+  }
+  .ctl-btn {
+    font-size:11px;
+    line-height:1.4;
+    color:#fff;
+    background:rgba(0,0,0,.6);
+    border:1px solid var(--panelBorder);
+    border-radius:6px;
+    padding:8px 10px;
+    min-width:140px;
+    text-align:center;
+    text-shadow:0 0 12px rgba(150,200,255,.8);
+    box-shadow:0 0 16px rgba(139,183,255,.6),0 20px 40px rgba(0,0,0,.9);
+    cursor:pointer;
+    user-select:none;
+    transition:.15s;
+  }
+  .ctl-btn:hover {
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 24px rgba(150,200,255,1),0 40px 80px rgba(0,0,0,1);
+  }
+
+  @media(max-width:900px){
+    .unit-card { transform:scale(.8); transform-origin:left top; }
+    .unit-heather { left:20px; top:140px; transform:none; }
+    .unit-isaac   { right:12px; top:200px; }
+    .unit-rit     { left:20px; bottom:220px; }
+    .unit-dean    { left:50%; bottom:140px; transform:translateX(-50%) scale(.9); }
+    .comm-panel  { max-width:300px; bottom:140px; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- 背景 -->
+<div class="bg-wrapper">
+  <div class="bg-scene" id="bgScene"></div>
+  <div class="bg-overlay-grad"></div>
+  <div class="scanline"></div>
+  <canvas class="fxCanvas" id="fxCanvas"></canvas>
+</div>
+
+<!-- 任務目標 -->
+<section class="objective-panel">
+  <div class="objective-title">CURRENT OBJECTIVE</div>
+  <div class="objective-body">
+    回收「最後目擊影像」<br>
+    如果湖裡的記憶投影還在播放那段畫面，我們就把它帶下來。  
+    我們在找的不是怪物，而是一個還活的人類。
+  </div>
+  <div class="objective-flag">
+    優先：逆轉之湖 / 危險度極高
+  </div>
+</section>
+
+<!-- Threat / 雷達圖面板 -->
+<aside class="threat-panel">
+  <div class="threat-title">THREAT MONITOR</div>
+  <div class="threat-active-name" id="threatName">里特</div>
+  <div class="threat-active-role" id="threatRole">前鋒 / 救援優先</div>
+
+  <div class="radar-zone">
+    <div class="radar-wrapper">
+      <canvas class="radar-canvas" id="radarCanvas" width="200" height="200"></canvas>
+
+      <!-- 五個角的標籤 -->
+      <div class="radar-label lbl-0">壓力場</div>
+      <div class="radar-label lbl-1">可視度</div>
+      <div class="radar-label lbl-2">敵方數量</div>
+      <div class="radar-label lbl-3">地形風險</div>
+      <div class="radar-label lbl-4">隊伍穩定</div>
+    </div>
+  </div>
+
+  <div class="threat-buttons">
+    <div class="small-btn" id="bgmToggleTop">BGM OFF</div>
+    <a class="small-btn" href="mission_brief.html">← 返回簡報畫面</a>
+  </div>
+</aside>
+
+<!-- 小隊角色卡 -->
+<div class="unit-card unit-heather" data-char="heather">
+  <div class="unit-headrow">
+    <div class="unit-portrait"><img src="img/portraits/heather.jpg" alt="海瑟"></div>
+    <div class="unit-meta">
+      <div class="unit-name">海瑟</div>
+      <div class="unit-role">偵查 / 支援</div>
+    </div>
+  </div>
+
+  <div class="bar-block">
+    <div class="bar-label hp-label">HP 92%</div>
+    <div class="hp-bar"><div class="hp-fill" style="width:92%;"></div></div>
+  </div>
+  <div class="bar-block">
+    <div class="bar-label stress-label">STRESS 63%</div>
+    <div class="stress-bar"><div class="stress-fill" style="width:63%;"></div></div>
+  </div>
+</div>
+
+<div class="unit-card unit-isaac" data-char="isaac">
+  <div class="unit-headrow">
+    <div class="unit-portrait"><img src="img/portraits/isaac.jpg" alt="艾薩克"></div>
+    <div class="unit-meta">
+      <div class="unit-name">艾薩克</div>
+      <div class="unit-role">遠程 / 老經驗</div>
+    </div>
+  </div>
+
+  <div class="bar-block">
+    <div class="bar-label hp-label">HP 49%</div>
+    <div class="hp-bar"><div class="hp-fill" style="width:49%;"></div></div>
+  </div>
+  <div class="bar-block">
+    <div class="bar-label stress-label">STRESS 82%</div>
+    <div class="stress-bar"><div class="stress-fill" style="width:82%;"></div></div>
+  </div>
+</div>
+
+<div class="unit-card unit-rit" data-char="rit">
+  <div class="unit-headrow">
+    <div class="unit-portrait"><img src="img/portraits/rit.jpg" alt="里特"></div>
+    <div class="unit-meta">
+      <div class="unit-name">里特</div>
+      <div class="unit-role">前鋒 / 救援優先</div>
+    </div>
+  </div>
+
+  <div class="bar-block">
+    <div class="bar-label hp-label">HP 80%</div>
+    <div class="hp-bar"><div class="hp-fill" style="width:80%;"></div></div>
+  </div>
+  <div class="bar-block">
+    <div class="bar-label stress-label">STRESS 45%</div>
+    <div class="stress-bar"><div class="stress-fill" style="width:45%;"></div></div>
+  </div>
+</div>
+
+<div class="unit-card unit-dean" data-char="dean">
+  <div class="unit-headrow">
+    <div class="unit-portrait"><img src="img/portraits/dean.jpg" alt="迪恩"></div>
+    <div class="unit-meta">
+      <div class="unit-name">迪恩</div>
+      <div class="unit-role">盾線 / 正面牽制</div>
+    </div>
+  </div>
+
+  <div class="bar-block">
+    <div class="bar-label hp-label">HP 71%</div>
+    <div class="hp-bar"><div class="hp-fill" style="width:71%;"></div></div>
+  </div>
+  <div class="bar-block">
+    <div class="bar-label stress-label">STRESS 58%</div>
+    <div class="stress-bar"><div class="stress-fill" style="width:58%;"></div></div>
+  </div>
+</div>
+
+<!-- COMM 字幕框（簡化版，避免左下疊圖） -->
+<section class="comm-panel">
+  <div class="comm-line" id="commLine">
+    <span class="comm-speaker">系統</span><span class="comm-role"> / 任務控台</span>：  
+    敵蹤雷達鎖定，風險極高。準備好就走。
+  </div>
+</section>
+
+<!-- 戰術按鈕 -->
+<div class="actions-row">
+  <div class="tac-btn" data-action="scan">
+    <div class="tac-main">SCAN</div>
+    <div class="tac-sub">環境掃描</div>
+  </div>
+  <div class="tac-btn" data-action="callout">
+    <div class="tac-main">CALL OUT</div>
+    <div class="tac-sub">全頻呼叫</div>
+  </div>
+  <div class="tac-btn" data-action="pushin">
+    <div class="tac-main">PUSH IN</div>
+    <div class="tac-sub">前壓推進</div>
+  </div>
+  <div class="tac-btn" data-action="extract">
+    <div class="tac-main">EXTRACT</div>
+    <div class="tac-sub">撤離座標</div>
+  </div>
+</div>
+
+<!-- 右下 BGM / 回上一頁 -->
+<div class="footer-ctl">
+  <div class="ctl-btn" id="bgmToggleBottom">BGM OFF</div>
+  <a class="ctl-btn" href="mission_brief.html">← 回到簡報畫面</a>
+</div>
+
+<!-- AUDIO -->
+<audio id="bgmCombat" src="audio/bgm_combat.mp3" preload="auto" loop></audio>
+<audio id="voiceAudio" preload="auto"></audio>
+
+<script src="js/gameData.js" defer></script>
+
+<script>
+/* ========= 角色資料 fallback (如果 js/gameData.js 沒給我們就用這份) ========= */
+let CHAR_DATA = {
+  rit: {
+    name:"里特",
+    role:"前鋒 / 救援優先",
+    portrait:"img/portraits/rit.jpg",
+    line:"我頂著。你們帶人走。不要回頭看我，快走！",
+    voice:"audio/rit_voice01.mp3",
+    stats:[70,50,60,55,80] 
+    // 壓力場, 可視度, 敵方數量, 地形風險, 隊伍穩定
+  },
+  heather: {
+    name:"海瑟",
+    role:"偵查 / 支援",
+    portrait:"img/portraits/heather.jpg",
+    line:"…你們有聽到嗎？不是風。那個聲音在叫我們退後。",
+    voice:"",
+    stats:[40,85,35,60,75]
+  },
+  dean: {
+    name:"迪恩",
+    role:"盾線 / 正面牽制",
+    portrait:"img/portraits/dean.jpg",
+    line:"我會擋正面。你們別管我，先帶人撤離！",
+    voice:"",
+    stats:[65,40,70,75,50]
+  },
+  isaac: {
+    name:"艾薩克",
+    role:"遠程 / 老經驗",
+    portrait:"img/portraits/isaac.jpg",
+    line:"我爸還活著。湖在說謊，它只是在嚇我們。",
+    voice:"",
+    stats:[55,60,90,45,40]
+  }
+};
+
+/* 如果外部有定義 GAME_CHAR_DATA，優先用外部版本 (讓你可之後從後端/JSON餵數字) */
+window.addEventListener("DOMContentLoaded",()=>{
+  if(window.GAME_CHAR_DATA){
+    CHAR_DATA = window.GAME_CHAR_DATA;
+  }
+});
+
+/* ========= 通訊框、雷達圖、角色卡互動 ========= */
+
+const commLineEl = document.getElementById("commLine");
+const voiceAudio = document.getElementById("voiceAudio");
+const threatNameEl = document.getElementById("threatName");
+const threatRoleEl = document.getElementById("threatRole");
+
+let activeCharKey = "rit"; // 預設顯示里特
+
+// 每個角色卡可以點，更新Threat Monitor + 下方字幕
+document.querySelectorAll(".unit-card").forEach(card=>{
+  card.addEventListener("click",()=>{
+    const key = card.dataset.char;
+    setActiveChar(key);
+  });
+});
+
+function setActiveChar(key){
+  const data = CHAR_DATA[key];
+  if(!data) return;
+
+  activeCharKey = key;
+
+  // Threat Monitor: 名字 / role
+  threatNameEl.textContent = data.name;
+  threatRoleEl.textContent = data.role;
+
+  // Comm：即時字幕
+  commLineEl.innerHTML = `
+    <span class="comm-speaker">${data.name}</span>
+    <span class="comm-role"> / ${data.role}</span>：
+    ${data.line}
+  `;
+
+  // 語音
+  if(data.voice){
+    voiceAudio.src = data.voice;
+    voiceAudio.currentTime = 0;
+    voiceAudio.play().catch(()=>{});
+  }
+
+  // Radar 數據刷新
+  radarStats = data.stats.slice(); // copy
+}
+
+/* ========= 雷達圖邏輯 ========= */
+
+const radarCanvas = document.getElementById("radarCanvas");
+const rctx = radarCanvas.getContext("2d");
+
+// radarStats = [壓力場, 可視度, 敵方數量, 地形風險, 隊伍穩定] 0~100
+let radarStats = CHAR_DATA[activeCharKey].stats.slice();
+let tAnim = 0;
+
+function drawRadar(){
+  const w = radarCanvas.width;
+  const h = radarCanvas.height;
+  rctx.clearRect(0,0,w,h);
+
+  const cx = w/2;
+  const cy = h/2;
+  const maxR = 70;
+
+  // 呼吸動畫
+  const pulse = 1 + 0.03*Math.sin(tAnim*0.05);
+
+  // 輔助多邊形層
+  const levels = 4;
+  for(let lv=1; lv<=levels; lv++){
+    const ratio = (lv/levels)*pulse;
+    polygonOutline(ratio*maxR, "rgba(139,183,255,.25)");
+  }
+
+  // 主區域
+  drawStatsArea(radarStats, "rgba(139,183,255,.15)", "rgba(139,183,255,.8)");
+
+  tAnim++;
+  requestAnimationFrame(drawRadar);
+
+  function polygonOutline(r, strokeStyle){
+    rctx.beginPath();
+    for(let i=0;i<5;i++){
+      const ang = (-90 + i*72) * Math.PI/180;
+      const x = cx + r*Math.cos(ang);
+      const y = cy + r*Math.sin(ang);
+      if(i===0) rctx.moveTo(x,y); else rctx.lineTo(x,y);
+    }
+    rctx.closePath();
+    rctx.strokeStyle = strokeStyle;
+    rctx.lineWidth = 1;
+    rctx.shadowColor="rgba(139,183,255,.6)";
+    rctx.shadowBlur=8;
+    rctx.stroke();
+  }
+
+  function drawStatsArea(data, fillStyle, strokeStyle){
+    rctx.beginPath();
+    data.forEach((val,i)=>{
+      const ratio = (val/100)*pulse;
+      const ang = (-90 + i*72)*Math.PI/180;
+      const x = cx + (ratio*maxR)*Math.cos(ang);
+      const y = cy + (ratio*maxR)*Math.sin(ang);
+      if(i===0) rctx.moveTo(x,y); else rctx.lineTo(x,y);
+    });
+    rctx.closePath();
+
+    rctx.fillStyle = fillStyle;
+    rctx.shadowColor="rgba(139,183,255,.7)";
+    rctx.shadowBlur=20;
+    rctx.fill();
+
+    rctx.lineWidth=2;
+    rctx.strokeStyle=strokeStyle;
+    rctx.stroke();
+
+    // 節點小亮點
+    data.forEach((val,i)=>{
+      const ratio = (val/100)*pulse;
+      const ang = (-90 + i*72)*Math.PI/180;
+      const x = cx + (ratio*maxR)*Math.cos(ang);
+      const y = cy + (ratio*maxR)*Math.sin(ang);
+      rctx.beginPath();
+      rctx.arc(x,y,3,0,Math.PI*2);
+      rctx.fillStyle="#fff";
+      rctx.shadowColor="rgba(255,255,255,.9)";
+      rctx.shadowBlur=10;
+      rctx.fill();
+    });
+  }
+}
+drawRadar();
+
+/* ========= 粒子特效 (雪粉 / 能量塵) ========= */
+(function initFX(){
+  const canvas = document.getElementById("fxCanvas");
+  const ctx = canvas.getContext("2d");
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+
+  const dots=[];
+  const COUNT=140;
+  function rand(min,max){return Math.random()*(max-min)+min;}
+
+  for(let i=0;i<COUNT;i++){
+    dots.push({
+      x:rand(0,w),
+      y:rand(0,h),
+      r:rand(1,2.5),
+      vx:rand(-0.2,0.2),
+      vy:rand(0.2,0.8),
+      a:rand(0.2,0.8)
+    });
+  }
+
+  function step(){
+    ctx.clearRect(0,0,w,h);
+    ctx.save();
+    ctx.fillStyle="#fff";
+    dots.forEach(d=>{
+      ctx.globalAlpha=d.a;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fill();
+      d.x += d.vx;
+      d.y += d.vy;
+      if(d.y>h){d.y=-10; d.x=Math.random()*w;}
+      if(d.x>w) d.x=0;
+      if(d.x<0) d.x=w;
+    });
+    ctx.restore();
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("resize",()=>{
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  step();
+})();
+
+/* ========= BGM 開關 (右上/右下同步) ========= */
+let bgmOn=false;
+const bgmAudio=document.getElementById("bgmCombat");
+const bgmToggleTop=document.getElementById("bgmToggleTop");
+const bgmToggleBottom=document.getElementById("bgmToggleBottom");
+
+function updateBGMBtn(){
+  const label = bgmOn ? "BGM ON" : "BGM OFF";
+  bgmToggleTop.textContent = label;
+  bgmToggleBottom.textContent = label;
+}
+function toggleBGM(){
+  if(!bgmOn){
+    bgmOn=true;
+    bgmAudio.currentTime=0;
+    bgmAudio.play().catch(()=>{});
+  } else {
+    bgmOn=false;
+    bgmAudio.pause();
+  }
+  updateBGMBtn();
+}
+bgmToggleTop.addEventListener("click",toggleBGM);
+bgmToggleBottom.addEventListener("click",toggleBGM);
+updateBGMBtn();
+
+/* ========= 戰術按鈕行為 ========= */
+const tacBtns=document.querySelectorAll(".tac-btn");
+
+/*
+  radarStats 對應：
+  0 壓力場
+  1 可視度
+  2 敵方數量
+  3 地形風險
+  4 队伍穩定
+*/
+
+tacBtns.forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const act=btn.dataset.action;
+    const data = CHAR_DATA[activeCharKey];
+    if(!data) return;
+
+    if(act==="scan"){
+      // SCAN 提升 "可視度"(index 1)
+      data.stats[1] = clamp(data.stats[1] + 5, 0, 100);
+      speak(data.name, data.role, "掃描更新完成，畫面清晰一點了。");
+    } else if(act==="callout"){
+      // CALL OUT: 壓力場(0)上升，因為大家緊繃全頻回報
+      data.stats[0] = clamp(data.stats[0] + 8, 0, 100);
+      speak(data.name, data.role, "全頻呼叫中——保持聯線，不要掉線。");
+    } else if(act==="pushin"){
+      // PUSH IN: 地形風險(3)上升
+      data.stats[3] = clamp(data.stats[3] + 10, 0, 100);
+      speak(data.name, data.role, "往前推進中，小心腳下。這裡都不是安全地面。");
+    } else if(act==="extract"){
+      // EXTRACT: 提示撤離
+      speak("系統", "任務控台", "準備座標中… 請集中隊伍，等待撤離信號。");
+    }
+
+    // radar 重繪數據=更新 activeCharKey 的 stats
+    radarStats = data.stats.slice();
+  });
+});
+
+function clamp(v,min,max){ return v<min?min:(v>max?max:v); }
+
+function speak(who, role, line){
+  commLineEl.innerHTML = `
+    <span class="comm-speaker">${who}</span>
+    <span class="comm-role"> / ${role}</span>：
+    ${line}
+  `;
+}
+
+/* ========= 初始化：預設選里特 ========= */
+setActiveChar("rit");
+updateBGMBtn();
+
+</script>
+</body>
+</html>

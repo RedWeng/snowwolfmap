@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>CHAPTER INTRO ｜ 雪狼男孩 Snow Wolf Boy</title>
+<style>
+body {
+  margin: 0;
+  background: #000;
+  overflow: hidden;
+  font-family: "Noto Sans TC", sans-serif;
+}
+
+/* ===== 背景影片 ===== */
+#introVideo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+#introVideo.show { opacity: 1; }
+
+/* ===== LOGO ===== */
+#logo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.1);
+  width: 42vmin;
+  opacity: 0;
+  z-index: 3;
+  filter: drop-shadow(0 0 10px rgba(139,183,255,0.6));
+  transition: opacity 2s ease, filter 1s ease;
+}
+#logo.glow {
+  opacity: 1;
+  animation: logoPulse 3s ease-in-out infinite alternate;
+}
+@keyframes logoPulse {
+  0% {
+    filter:
+      drop-shadow(0 0 15px rgba(139,183,255,0.6))
+      drop-shadow(0 0 30px rgba(139,183,255,0.6));
+  }
+  100% {
+    filter:
+      drop-shadow(0 0 50px rgba(139,183,255,1))
+      drop-shadow(0 0 90px rgba(139,183,255,0.9));
+  }
+}
+
+/* ===== 章節文字 ===== */
+#chapterTitle {
+  position: fixed;
+  bottom: 12vh;
+  width: 100%;
+  text-align: center;
+  font-size: clamp(22px, 2.4vw, 32px);
+  color: #cfe3ff;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 20px rgba(139,183,255,0.9);
+  opacity: 0;
+  z-index: 5;
+  animation: fadeInTitle 2.5s ease 4s forwards;
+}
+@keyframes fadeInTitle { to { opacity: 1; transform: translateY(-10px); } }
+
+/* ===== 飄雪層 ===== */
+#snowCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+/* ===== 點擊提示 ===== */
+#clickStart {
+  position: fixed;
+  bottom: 8vh;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  color: #8bb7ff;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 12px rgba(139,183,255,.8);
+  animation: blink 1.6s ease-in-out infinite;
+  z-index: 10;
+}
+@keyframes blink { 0%,100%{opacity:.3;} 50%{opacity:1;} }
+
+/* ===== 進入遊戲按鈕 ===== */
+#enterBtn {
+  position: fixed;
+  bottom: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: rgba(139,183,255,.1);
+  border: 1px solid rgba(139,183,255,.6);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(139,183,255,.6);
+  z-index: 8;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+#enterBtn.show { opacity: 1; }
+#enterBtn:hover {
+  background: rgba(139,183,255,.25);
+  box-shadow: 0 0 28px rgba(139,183,255,1);
+}
+</style>
+</head>
+<body>
+
+<!-- 背景影片 -->
+<video id="introVideo" src="video/intro_ch1.mp4" muted autoplay playsinline></video>
+
+<!-- LOGO -->
+<img id="logo" src="img/ui/snowwolf_logo.png" alt="Snow Wolf Boy Logo" />
+
+<!-- 章節標題 -->
+<div id="chapterTitle">CHAPTER I：最遙遠的地方<br><small>THE FARTHEST PLACE</small></div>
+
+<!-- 飄雪 -->
+<canvas id="snowCanvas"></canvas>
+
+<!-- 點擊提示 -->
+<div id="clickStart">CLICK TO BEGIN</div>
+
+<!-- 進入遊戲 -->
+<button id="enterBtn" onclick="window.location.href='t_storybeat.html'">ENTER MISSION</button>
+
+<!-- 音樂 -->
+<audio id="bgmIntro" src="audio/bgm_intro.mp3" preload="auto" loop></audio>
+<audio id="boomSfx" src="audio/boom_intro.mp3" preload="auto"></audio>
+
+<script>
+const bgm = document.getElementById("bgmIntro");
+const boom = document.getElementById("boomSfx");
+const video = document.getElementById("introVideo");
+const clickTip = document.getElementById("clickStart");
+const enterBtn = document.getElementById("enterBtn");
+const logo = document.getElementById("logo");
+
+// 🎵 音樂：影片準備好後立即播放（oncanplay 確保觸發）
+video.addEventListener("canplay", () => {
+  bgm.volume = 0.9;
+  bgm.play().catch(() => console.log("等待互動播放音樂..."));
+});
+
+// 若瀏覽器仍阻擋 → 點擊立即播放音樂
+document.addEventListener("click", () => {
+  clickTip.remove();
+  bgm.play().catch(()=>{});
+}, { once: true });
+
+// 🎥 載入動畫
+window.addEventListener("load", () => {
+  setTimeout(() => { video.classList.add("show"); }, 500);
+
+  // Logo 在 18 秒後淡入並發光＋播放低頻音效
+  setTimeout(() => {
+    logo.classList.add("glow");
+    enterBtn.classList.add("show");
+    boom.volume = 0.8;
+    boom.play().catch(()=>{});
+  }, 18000);
+});
+
+/* ===== 飄雪動畫 ===== */
+const canvas = document.getElementById("snowCanvas");
+const ctx = canvas.getContext("2d");
+let W, H, snows = [];
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize(); window.addEventListener("resize", resize);
+for(let i=0;i<180;i++){ snows.push({x:Math.random()*W, y:Math.random()*H, r:Math.random()*3+1, d:Math.random()*1+0.5}); }
+let angle = 0;
+function drawSnow(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "rgba(180,200,255,0.9)";
+  ctx.beginPath();
+  for(const s of snows){ctx.moveTo(s.x,s.y);ctx.arc(s.x,s.y,s.r,0,Math.PI*2,true);}
+  ctx.fill(); updateSnow();
+}
+function updateSnow(){
+  angle += 0.001;
+  for(const s of snows){
+    s.y += Math.cos(angle + s.d) + 1 + s.r / 2;
+    s.x += Math.sin(angle) * 1;
+    if(s.y > H){s.y = 0; s.x = Math.random() * W;}
+  }
+}
+setInterval(drawSnow, 33);
+</script>
+
+</body>
+</html>

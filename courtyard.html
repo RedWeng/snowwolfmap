@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>蘭薩爾校園廣場 Courtyard | Snowwolf HUB</title>
+<link rel="preload" as="audio" href="audio/courtyard_theme.mp3">
+<link rel="preload" as="audio" href="sfx/click.wav">
+<style>
+:root{
+  --ink:#e7eefb;--muted:#9bb2d4;--chip:#152238;--panel:#0f1726;
+  --edge:#223553;--primary:#78a2ff;--accent:#9ad6ff;--radius:18px;
+}
+*{box-sizing:border-box} html,body{height:100%;margin:0;background:#000;
+  font-family:"PingFang TC","Noto Sans TC",sans-serif;color:var(--ink)}
+/* 背景 */
+.bg{position:fixed;inset:0;background:url("img/bg/school_courtyard.jpg") center/cover no-repeat;
+  filter:brightness(.98) contrast(1.05);transition:filter .6s}
+.shade{position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(1200px 800px at 50% 20%,rgba(0,0,0,.08),rgba(0,0,0,.5) 70%)}
+/* 飄雪 Canvas */
+#snow, #mist{position:fixed;inset:0;pointer-events:none}
+/* 上排導覽與 HUD */
+.topbar{position:fixed;left:18px;right:18px;top:12px;z-index:10;display:flex;gap:12px;align-items:center}
+.chip{background:var(--chip);color:#cfe1ff;border:1px solid var(--edge);
+  border-radius:999px;padding:8px 12px;font-size:13px;cursor:pointer}
+.spacer{flex:1}
+.hud{position:fixed;left:18px;right:18px;top:56px;z-index:9;display:flex;gap:24px;align-items:center}
+.badges{display:flex;gap:8px}
+.badges .chip{display:flex;align-items:center;gap:6px}
+.bars{display:flex;gap:22px}
+.bar{width:210px}
+.bar label{display:block;font-size:12px;color:#b9c8e6;margin:0 0 4px 2px}
+.meter{height:6px;background:#0d1830;border:1px solid #1e2c47;border-radius:999px;overflow:hidden}
+.meter span{display:block;height:100%;background:linear-gradient(90deg,#4aa3ff,#9ad6ff)}
+/* 任務公告板 */
+.board{position:fixed;left:50%;top:58%;transform:translate(-50%,-50%);
+  width:min(1100px,92vw);display:grid;grid-template-columns:repeat(3,1fr);gap:14px;z-index:6}
+.card{background:linear-gradient(180deg,#0e182bde,#0a1220e6);border:1px solid #1b2b47;border-radius:16px;
+  backdrop-filter:blur(8px);padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.card h4{margin:0 0 6px 0;font-size:16px}
+.card p{margin:6px 0 10px 0;color:#c3d6f7;font-size:13px;min-height:38px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tag{font-size:11px;padding:4px 8px;border:1px solid #25426e;border-radius:999px;background:#132744}
+.btn{background:#173055;color:#e7f1ff;border:1px solid #27426e;border-radius:12px;padding:8px 12px;
+  font-size:13px;cursor:pointer}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+/* 對話框 */
+.dialog{position:fixed;left:18px;right:18px;bottom:18px;z-index:7;
+  background:linear-gradient(180deg,#0d1524e6,#0a111ee6);border:1px solid #1a2a44;border-radius:22px;
+  padding:18px 22px;display:grid;grid-template-columns:88px 1fr auto;gap:18px;align-items:end}
+.avatar img{width:88px;height:88px;border-radius:16px;object-fit:cover;border:1px solid #273a5a}
+.line{font-size:18px}
+#next{align-self:center}
+#returnGame{position:fixed;right:28px;bottom:108px;z-index:8;background:#173055;border:1px solid #2a4b7a;
+  border-radius:50%;width:68px;height:68px;display:flex;align-items:center;justify-content:center;
+  font-size:26px;box-shadow:0 0 20px #9ad6ff80;cursor:pointer}
+/* 浮動提示 */
+.toast{position:fixed;right:18px;bottom:18px;background:#0c1a30;border:1px solid #234168;border-radius:12px;
+  padding:10px 14px;display:none;z-index:50}
+@media (max-width:960px){
+  .board{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<canvas id="snow"></canvas>
+<canvas id="mist"></canvas>
+<div class="bg"></div><div class="shade"></div>
+
+<!-- 導覽 -->
+<div class="topbar">
+  <button class="chip" data-jump="school.html">🏫 回到學校首頁</button>
+  <button class="chip" data-jump="wardrobe.html">🧥 衣櫃</button>
+  <button class="chip" data-jump="bag.html">🎒 道具</button>
+  <div class="spacer"></div>
+  <div class="badges">
+    <div class="chip">💰 金幣 <b id="coins">0</b></div>
+    <button id="bgmBtn" class="chip">BGM：開</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="bars">
+    <div class="bar"><label>勇氣 Courage</label><div class="meter"><span id="mC" style="width:0%"></span></div></div>
+    <div class="bar"><label>同理 Empathy</label><div class="meter"><span id="mE" style="width:0%"></span></div></div>
+    <div class="bar"><label>真實 Truth</label><div class="meter"><span id="mT" style="width:0%"></span></div></div>
+  </div>
+</div>
+
+<!-- 任務公告板 -->
+<div class="board" id="board"></div>
+
+<!-- 對話 -->
+<div class="dialog">
+  <div class="avatar"><img id="ava" src="img/avatars/system_core.png" alt="avatar"></div>
+  <div>
+    <div id="who" style="font-weight:700;font-size:18px">系統</div>
+    <div id="line" class="line">「歡迎來到校園廣場。從公告板挑一個任務開始吧！」</div>
+  </div>
+  <button id="next" class="btn">下一句 ▶</button>
+</div>
+
+<!-- 回到冒險 -->
+<div id="returnGame" title="回到冒險">🏔️</div>
+
+<div id="toast" class="toast"></div>
+
+<audio id="bgm" src="audio/courtyard_theme.mp3" loop></audio>
+<audio id="sfx" src="sfx/click.wav" preload="auto"></audio>
+
+<script>
+// 快捷
+const $ = (q)=>document.querySelector(q);
+const SFX = $('#sfx');
+const toast=(t)=>{const n=$('#toast');n.textContent=t;n.style.display='block';setTimeout(()=>n.style.display='none',1200);};
+function sfx(){try{SFX.currentTime=0;SFX.play();}catch{}}
+
+// 狀態（沿用 school.html 相同 key）
+const state={
+  coins: Number(localStorage.getItem('coins')||140),
+  C: +localStorage.getItem('stat_C')||24,
+  E: +localStorage.getItem('stat_E')||18,
+  T: +localStorage.getItem('stat_T')||12,
+  bag: JSON.parse(localStorage.getItem('bag')||'[]')
+};
+const mm={C:$('#mC'),E:$('#mE'),T:$('#mT')};
+function syncHUD(){
+  $('#coins').textContent = state.coins;
+  mm.C.style.width = Math.min(state.C,100)+'%';
+  mm.E.style.width = Math.min(state.E,100)+'%';
+  mm.T.style.width = Math.min(state.T,100)+'%';
+  localStorage.setItem('coins',state.coins);
+  localStorage.setItem('stat_C',state.C);
+  localStorage.setItem('stat_E',state.E);
+  localStorage.setItem('stat_T',state.T);
+  localStorage.setItem('bag',JSON.stringify(state.bag));
+}
+syncHUD();
+
+// 對話
+const dialogScripts=[
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「佈告欄今天好多任務！選一個最想挑戰的吧。」'},
+  {n:'迪恩',a:'img/avatars/dean.png',t:'「我投勇氣試煉一票，跑操場三圈那種。」'},
+  {n:'艾薩克',a:'img/avatars/isaac.png',t:'「也可以去幫圖書館整理『會自己飛的書』。」'},
+  {n:'系統',a:'img/avatars/system_core.png',t:'提示：完成任務會得到金幣、道具或提升勇氣／同理／真實。'}
+];
+let dIdx=0;
+function showLine(o){$('#who').textContent=o.n;$('#line').textContent=o.t;$('#ava').src=o.a||'img/avatars/system_core.png';}
+$('#next').onclick=()=>{sfx();showLine(dialogScripts[dIdx++%dialogScripts.length]);};
+showLine(dialogScripts[0]);
+
+// 任務資料（完成狀態保存在 localStorage）
+const QUEST_KEY='quests_courtyard_v1';
+let QUEST_STATE = JSON.parse(localStorage.getItem(QUEST_KEY)||'{}');
+
+const QUESTS=[
+  {
+    id:'q_run',
+    title:'勇氣試煉：晨間三圈',
+    desc:'在操場完成三圈練習，堅持到最後。',
+    tags:['勇氣 +3','金幣 +10'],
+    reward:{C:3,coins:10}
+  },
+  {
+    id:'q_books',
+    title:'圖書館：安撫飛書',
+    desc:'協助館員把漂浮書籍導回書架。',
+    tags:['同理 +2','真實 +1','道具：時間書籤'],
+    reward:{E:2,T:1,item:'時間書籤'}
+  },
+  {
+    id:'q_music',
+    title:'音樂教室：合奏挑戰',
+    desc:'和同學完成一段四手聯彈。',
+    tags:['同理 +1','勇氣 +1','金幣 +8'],
+    reward:{E:1,C:1,coins:8}
+  },
+  {
+    id:'q_principal',
+    title:'校長室：誠實報告',
+    desc:'如實回報今天的犯錯並提出改進。',
+    tags:['真實 +3'],
+    reward:{T:3}
+  },
+  {
+    id:'q_art',
+    title:'美術教室：完成雪狼速寫',
+    desc:'把內心的光畫進畫布。',
+    tags:['同理 +2','道具：畫筆'],
+    reward:{E:2,item:'畫筆'}
+  },
+  {
+    id:'q_clean',
+    title:'校園志工：廣場清掃',
+    desc:'一起把廣場打掃乾淨，讓風景發光。',
+    tags:['勇氣 +1','同理 +1','金幣 +6'],
+    reward:{C:1,E:1,coins:6}
+  }
+];
+
+function renderBoard(){
+  const box=$('#board'); box.innerHTML='';
+  QUESTS.forEach(q=>{
+    const done = !!QUEST_STATE[q.id];
+    const el=document.createElement('div');
+    el.className='card';
+    el.innerHTML=`
+      <h4>${q.title} ${done? '✅':''}</h4>
+      <p>${q.desc}</p>
+      <div class="tags">${q.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" data-act="goto" data-id="${q.id}">前往地點</button>
+        <button class="btn" data-act="claim" data-id="${q.id}" ${done?'disabled':''}>完成任務</button>
+      </div>`;
+    box.appendChild(el);
+  });
+}
+renderBoard();
+
+$('#board').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; sfx();
+  const id=b.dataset.id; const q=QUESTS.find(x=>x.id===id);
+  if(b.dataset.act==='goto'){
+    // 導向學校對應場景（用你的 school.html 進入點）
+    localStorage.setItem('school_target_from_map',id); // 給 school.html 判斷要自動跳哪一間
+    location.href='school.html';
+  }else if(b.dataset.act==='claim'){
+    if(QUEST_STATE[id]){toast('已完成過此任務');return;}
+    QUEST_STATE[id]=true;
+    const r=q.reward;
+    state.C += r.C||0; state.E += r.E||0; state.T += r.T||0;
+    state.coins += r.coins||0;
+    if(r.item){ state.bag.push(r.item); toast(`獲得道具：${r.item}`); }
+    syncHUD(); localStorage.setItem(QUEST_KEY,JSON.stringify(QUEST_STATE));
+    renderBoard();
+    showLine({n:'系統',a:'img/avatars/system_core.png',t:`任務完成！勇氣+${r.C||0} 同理+${r.E||0} 真實+${r.T||0} 金幣+${r.coins||0}`});
+  }
+});
+
+// 連結
+document.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>{sfx();location.href=b.dataset.jump;}));
+$('#returnGame').onclick=()=>{sfx();location.href='mission_snow_temple.html';};
+
+// BGM
+const bgm=$('#bgm');
+function playBGM(){try{bgm.volume=.8;bgm.play();}catch{}}
+playBGM();
+$('#bgmBtn').onclick=()=>{sfx(); if(bgm.paused){playBGM();$('#bgmBtn').textContent='BGM：開';} else {bgm.pause();$('#bgmBtn').textContent='BGM：關';}};
+
+// 飄雪
+(function snow(){
+  const c=$('#snow'),ctx=c.getContext('2d');
+  function rs(){c.width=innerWidth;c.height=innerHeight}
+  addEventListener('resize',rs); rs();
+  const flakes=Array.from({length:180},()=>({
+    x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*2+0.8,v:Math.random()*0.6+0.3
+  }));
+  (function loop(){
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.fillStyle='rgba(230,245,255,.85)';
+    flakes.forEach(f=>{
+      f.y+=f.v; f.x+=Math.sin(f.y*0.01)*0.2;
+      if(f.y>c.height){f.y=-10;f.x=Math.random()*c.width}
+      ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  })();
+})();
+
+// 薄霧
+(function mist(){
+  const c=$('#mist'),ctx=c.getContext('2d');
+  function rs(){c.width=innerWidth;c.height=innerHeight}
+  addEventListener('resize',rs); rs();
+  let t=0;
+  (function loop(){
+    t+=0.003; ctx.clearRect(0,0,c.width,c.height);
+    for(let i=0;i<3;i++){
+      const g=ctx.createRadialGradient(
+        (Math.sin(t+i)*0.3+0.5)*c.width,
+        (Math.cos(t*0.8+i)*0.2+0.8)*c.height,
+        0,
+        (Math.sin(t+i)*0.3+0.5)*c.width,
+        (Math.cos(t*0.8+i)*0.2+0.8)*c.height,
+        Math.min(c.width,c.height)*.6
+      );
+      g.addColorStop(0,'rgba(120,170,220,0.06)');
+      g.addColorStop(1,'rgba(120,170,220,0)');
+      ctx.fillStyle=g; ctx.fillRect(0,0,c.width,c.height);
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>

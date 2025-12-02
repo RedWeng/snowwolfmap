@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,
+initial-scale=1.0" />
+<title>第一季任務系統｜雪狼男孩 Snow Wolf Boy</title>
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: "Noto Sans TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  :root {
+    --bg-deep: radial-gradient(circle at 50% 0%, #1a1f35 0%, #050509 70%);
+    --panel-bg: rgba(10,12,20,.6);
+    --panel-border: rgba(139,183,255,.5);
+    --panel-glow: 0 0 30px rgba(120,180,255,.6);
+    --txt-dim: #8e94c7;
+    --txt-soft: #d6dbff;
+    --accent: #8bb7ff;
+    --accent-soft: rgba(139,183,255,.18);
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    margin:0;
+    background: var(--bg-deep);
+    color:#fff;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    position:relative;
+    font-size:14px;
+  }
+
+  /* 能量暈光 */
+  body::before {
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(80,120,255,.18) 0%, transparent 70%),
+      radial-gradient(circle at 80% 20%, rgba(255,100,200,.07) 0%, transparent 70%);
+    filter: blur(60px);
+    mix-blend-mode:screen;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* 空氣粒子層 */
+  #fxCanvas {
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:1;
+  }
+
+  /* 遊戲 HUD 版面 */
+  .game-shell {
+    position:relative;
+    flex:1;
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto 200px;
+    grid-template-areas:
+      "map side"
+      "log side";
+    gap:16px;
+    padding:16px 16px 24px;
+    width:100%;
+    max-width:1400px;
+    margin:0 auto;
+    z-index:2;
+  }
+
+  /*********************
+   * NAV / TOP BAR
+   *********************/
+  .topbar {
+    position:relative;
+    z-index:3;
+    width:100%;
+    max-width:1400px;
+    margin:0 auto;
+    padding:12px 16px 8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    font-size:12px;
+    line-height:1.4;
+  }
+
+  .top-left .title {
+    font-size:16px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:
+      0 0 8px rgba(160,200,255,.8),
+      0 0 24px rgba(160,200,255,.4);
+    letter-spacing:.05em;
+  }
+  .top-left .subtitle {
+    color:var(--txt-dim);
+    margin-top:4px;
+  }
+
+  .top-right {
+    text-align:right;
+  }
+
+  .back-btn {
+    background:rgba(0,0,0,.4);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-sm);
+    padding:6px 10px;
+    color:#fff;
+    text-decoration:none;
+    font-size:12px;
+    line-height:1.2;
+    box-shadow:0 0 12px rgba(120,180,255,.6);
+    backdrop-filter:blur(6px);
+    transition:.2s;
+    display:inline-block;
+  }
+  .back-btn:hover {
+    background:var(--accent-soft);
+    box-shadow:0 0 20px rgba(150,200,255,.9);
+  }
+
+  /* BGM toggle */
+  .audio-toggle {
+    margin-top:8px;
+    font-size:11px;
+    color:#8bb7ff;
+    cursor:pointer;
+    text-align:right;
+    user-select:none;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .audio-toggle span {
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:6px;
+    padding:4px 6px;
+    background:rgba(0,0,0,.4);
+  }
+  .audio-toggle span.active {
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 12px rgba(139,183,255,.7);
+  }
+
+  /*********************
+   * MAP AREA
+   *********************/
+  .map-wrap {
+    grid-area:map;
+    position:relative;
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-md);
+    background:rgba(5,7,12,.4);
+    box-shadow:
+      var(--panel-glow),
+      0 40px 80px rgba(0,0,0,.9);
+    overflow:hidden;
+    min-height:360px;
+  }
+
+  .map-wrap .hud-corner {
+    position:absolute;
+    width:32px;
+    height:32px;
+    border-color:var(--panel-border);
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    opacity:.6;
+    pointer-events:none;
+  }
+  .map-wrap .c1 { left:8px;top:8px;
+    border-left:2px solid var(--panel-border);
+    border-top:2px solid var(--panel-border);
+    border-radius:4px 0 0 0;
+  }
+  .map-wrap .c2 { right:8px;top:8px;
+    border-right:2px solid var(--panel-border);
+    border-top:2px solid var(--panel-border);
+    border-radius:0 4px 0 0;
+  }
+  .map-wrap .c3 { left:8px;bottom:8px;
+    border-left:2px solid var(--panel-border);
+    border-bottom:2px solid var(--panel-border);
+    border-radius:0 0 0 4px;
+  }
+  .map-wrap .c4 { right:8px;bottom:8px;
+    border-right:2px solid var(--panel-border);
+    border-bottom:2px solid var(--panel-border);
+    border-radius:0 0 4px 0;
+  }
+
+  .map-bg {
+    position:absolute;
+    inset:0;
+    background:#000 url("img/game/season1_map.jpg") center/cover no-repeat;
+    filter:brightness(.9) saturate(1.1);
+    transition:background-image .3s ease;
+  }
+  .map-overlay-glow {
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(120,180,255,.25) 0%, transparent 70%),
+      radial-gradient(circle at 70% 70%, rgba(255,120,200,.15) 0%, transparent 70%);
+    mix-blend-mode:screen;
+    opacity:.5;
+    pointer-events:none;
+  }
+  .map-overlay-fade {
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,.7) 80%);
+    pointer-events:none;
+  }
+
+  .poi-btn {
+    position:absolute;
+    min-width:120px;
+    max-width:160px;
+    background:rgba(0,0,0,.6);
+    border:1px solid rgba(139,183,255,.7);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:12px;
+    line-height:1.4;
+    color:#fff;
+    text-shadow:0 0 8px rgba(150,200,255,.8);
+    box-shadow:0 15px 30px rgba(0,0,0,.9),0 0 16px rgba(120,180,255,.6);
+    backdrop-filter:blur(6px);
+    cursor:pointer;
+    transition:.2s;
+  }
+  .poi-btn:hover,
+  .poi-btn.active {
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 16px rgba(150,200,255,1),0 30px 60px rgba(0,0,0,1);
+    transform:scale(1.05);
+    border-color:#8bb7ff;
+  }
+  .poi-title {
+    font-weight:600;
+    font-size:12px;
+    color:#8bb7ff;
+    letter-spacing:.05em;
+    margin-bottom:2px;
+  }
+  .poi-desc {
+    color:#d6dbff;
+    font-size:11px;
+    line-height:1.5;
+  }
+
+  /* 節點座標 */
+  .poi-school { left:12%; top:60%; }
+  .poi-forest { left:30%; top:30%; }
+  .poi-lake   { right:20%; top:45%; }
+  .poi-stone  { right:28%; top:20%; }
+
+  /*********************
+   * SIDE PANEL
+   *********************/
+  .side-panel {
+    grid-area:side;
+    background:rgba(10,12,20,.6);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--panel-glow),0 40px 80px rgba(0,0,0,.9);
+    padding:16px;
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+
+  .side-panel-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:12px;
+  }
+  .panel-label {
+    font-size:11px;
+    font-weight:600;
+    color:var(--accent);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .panel-main-title {
+    font-size:16px;
+    font-weight:600;
+    color:#fff;
+    line-height:1.4;
+    margin-top:4px;
+    text-shadow:0 0 8px rgba(150,200,255,.6);
+  }
+
+  .panel-sec {
+    background:rgba(0,0,0,.4);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:var(--radius-sm);
+    padding:12px;
+    margin-bottom:12px;
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 16px rgba(120,180,255,.4);
+    min-height:0;
+  }
+  .panel-sec h4 {
+    margin:0 0 6px;
+    font-size:12px;
+    font-weight:600;
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    letter-spacing:.05em;
+  }
+  .panel-sec .panel-text {
+    font-size:12px;
+    line-height:1.5;
+    color:#ccc;
+    white-space:pre-line;
+  }
+
+  .loc-thumb {
+    width:100%;
+    aspect-ratio:16/9;
+    border-radius:var(--radius-sm);
+    border:1px solid rgba(255,255,255,.15);
+    background:#000 center/cover no-repeat;
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 16px rgba(120,180,255,.4);
+    margin-bottom:8px;
+    transition:background-image .3s ease;
+  }
+
+  /* 任務觀察補充（角色語氣） */
+  #sideNote {
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    margin-top:8px;
+  }
+
+  .side-block-title {
+    font-size:11px;
+    font-weight:600;
+    color:var(--accent);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    margin-bottom:8px;
+  }
+
+  .party-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .avatar-card {
+    background: rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.4);
+    box-shadow:
+      0 0 16px rgba(120,180,255,.5),
+      0 20px 40px rgba(0,0,0,.9);
+    border-radius: 12px;
+    padding:8px 10px;
+    width:120px;
+    color:#fff;
+    font-size:12px;
+    line-height:1.4;
+    position:relative;
+    cursor:pointer;
+    transition:.15s;
+  }
+  .avatar-card:hover,
+  .avatar-card.active {
+    box-shadow:
+      0 0 20px rgba(150,200,255,.8),
+      0 30px 60px rgba(0,0,0,1);
+    transform:translateY(-2px) scale(1.03);
+    border-color:#8bb7ff;
+  }
+
+  .avatar-img-wrap {
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    overflow:hidden;
+    border:1px solid rgba(139,183,255,.6);
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    background:#000;
+    margin-bottom:6px;
+  }
+  .avatar-img-wrap img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+
+  .avatar-name {
+    color:#fff;
+    font-weight:600;
+    font-size:12px;
+    text-shadow:0 0 8px rgba(150,200,255,.8);
+  }
+  .avatar-role {
+    color:#8bb7ff;
+    font-size:11px;
+    white-space:nowrap;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .avatar-status {
+    font-size:10px;
+    color:#ccc;
+    margin-top:4px;
+    opacity:.8;
+  }
+
+  .accept-btn {
+    width:100%;
+    background:rgba(0,0,0,.6);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-md);
+    padding:10px;
+    font-size:13px;
+    color:#fff;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:0 0 16px rgba(120,180,255,.8),0 40px 80px rgba(0,0,0,.9);
+    text-shadow:0 0 8px rgba(150,200,255,.8);
+    transition:.2s;
+  }
+  .accept-btn:hover {
+    background:var(--accent-soft);
+    box-shadow:0 0 24px rgba(150,200,255,1),0 60px 120px rgba(0,0,0,1);
+  }
+
+  /*********************
+   * LOG PANEL
+   *********************/
+  .log-panel {
+    grid-area:log;
+    background:rgba(10,12,20,.4);
+    border:1px solid rgba(139,183,255,.4);
+    border-radius:var(--radius-md);
+    box-shadow:var(--panel-glow),0 40px 80px rgba(0,0,0,.9);
+    padding:12px 16px;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .log-header {
+    font-size:11px;
+    font-weight:600;
+    color:var(--accent);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+    margin-bottom:8px;
+    flex-shrink:0;
+  }
+  .log-scroll {
+    flex:1;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:var(--radius-sm);
+    overflow:auto;
+    background:rgba(0,0,0,.4);
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 16px rgba(120,180,255,.4);
+    padding:12px;
+    font-size:12px;
+    line-height:1.5;
+    color:#ccc;
+  }
+  .log-entry {
+    margin-bottom:10px;
+  }
+  .log-entry .time {
+    color:#8bb7ff;
+    font-size:11px;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .log-entry .msg {
+    margin-top:2px;
+    white-space:pre-line;
+  }
+
+  /*********************
+   * RESPONSIVE
+   *********************/
+  @media(max-width:1000px){
+    .game-shell{
+      grid-template-columns:1fr;
+      grid-template-rows:auto auto auto;
+      grid-template-areas:
+        "map"
+        "side"
+        "log";
+      height:auto;
+      overflow-y:auto;
+    }
+    body{
+      overflow:auto;
+    }
+    .map-wrap{min-height:300px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 粒子層 -->
+<canvas id="fxCanvas"></canvas>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="top-left">
+    <div class="title">第一季：最遙遠的地方</div>
+    <div class="subtitle">任務控制中心 / Ransar Primary · Operation Snow Wolf</div>
+  </div>
+  <div class="top-right">
+    <a class="back-btn" href="index.html">← 回到主世界</a>
+    <div class="audio-toggle" id="audioToggle">
+      <span id="bgmStatus">BGM OFF</span>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN GAME WRAPPER -->
+<main class="game-shell">
+
+  <!-- MAP -->
+  <section class="map-wrap">
+    <div class="hud-corner c1"></div>
+    <div class="hud-corner c2"></div>
+    <div class="hud-corner c3"></div>
+    <div class="hud-corner c4"></div>
+
+    <!-- 大地圖背景 -->
+    <div class="map-bg" id="mapBg"></div>
+
+    <!-- 顏色能量層 -->
+    <div class="map-overlay-glow"></div>
+    <div class="map-overlay-fade"></div>
+
+    <!-- 地點按鈕 -->
+    <div class="poi-btn poi-school active" data-loc="school">
+      <div class="poi-title">蘭薩爾小學</div>
+      <div class="poi-desc">安全區 / 補給點 / 里特的日常世界</div>
+    </div>
+
+    <div class="poi-btn poi-forest" data-loc="forest">
+      <div class="poi-title">穆高爾森林入口</div>
+      <div class="poi-desc">狼群傳說開始的地方</div>
+    </div>
+
+    <div class="poi-btn poi-lake" data-loc="lake">
+      <div class="poi-title">逆轉之湖</div>
+      <div class="poi-desc">會映出你不想面對的記憶</div>
+    </div>
+
+    <div class="poi-btn poi-stone" data-loc="stone">
+      <div class="poi-title">失去的石墩</div>
+      <div class="poi-desc">被刪掉的歷史 / 禁語區域</div>
+    </div>
+  </section>
+
+  <!-- LOG PANEL -->
+  <section class="log-panel">
+    <div class="log-header">MISSION LOG</div>
+    <div class="log-scroll" id="logScroll">
+      <div class="log-entry">
+        <div class="time">[00:00]</div>
+        <div class="msg">系統啟動：雪狼行動 第一季。</div>
+      </div>
+      <div class="log-entry">
+        <div class="time">[00:12]</div>
+        <div class="msg">里特：我只是想把艾薩克的爸爸找回來，真的就這樣。</div>
+      </div>
+      <div class="log-entry">
+        <div class="time">[00:24]</div>
+        <div class="msg">米斯老師：離開校園後，你們不是「學生」，你們是「隊員」。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIDE PANEL -->
+  <aside class="side-panel">
+    <div class="side-panel-header">
+      <div>
+        <div class="panel-label">LOCATION</div>
+        <div class="panel-main-title" id="sideLocName">蘭薩爾小學</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:var(--txt-dim);line-height:1.4;">
+        <div>危險等級：<span id="sideDanger" style="color:#8bb7ff;">LOW</span></div>
+        <div>建議隊員：<span id="sideSuggest">里特 / 海瑟 / 迪恩</span></div>
+      </div>
+    </div>
+
+    <div class="panel-sec">
+      <div class="loc-thumb" id="sideThumb"
+           style="background-image:url('img/game/thumb_school.jpg');"></div>
+      <h4>地點描述</h4>
+      <div class="panel-text" id="sideLocDesc">
+        這是表面上的普通小學，也是目前唯一能假裝「一切還正常」的地方。
+        米斯老師把整棟樓當成防護結界。
+      </div>
+    </div>
+
+    <div class="panel-sec">
+      <h4>目前任務 / 隊員觀察</h4>
+      <div class="panel-text" id="sideMission">
+        協助艾薩克尋找他的父親。
+        線索顯示狼群將人帶往森林深處。
+      </div>
+      <div class="panel-text" id="sideNote" style="margin-top:8px;">
+        「不管大人信不信，我知道有人被帶走了。我不會放著不管。」
+      </div>
+    </div>
+
+    <div class="side-block">
+      <div class="side-block-title">可出擊隊員</div>
+
+      <div class="party-row">
+        <div class="avatar-card active" data-char="rit">
+          <div class="avatar-img-wrap">
+            <img src="img/characters/rit.jpg" alt="里特 Rit">
+          </div>
+          <div class="avatar-name">里特</div>
+          <div class="avatar-role">前鋒 / 救人派</div>
+          <div class="avatar-status">狀態：OK</div>
+        </div>
+
+        <div class="avatar-card" data-char="heather">
+          <div class="avatar-img-wrap">
+            <img src="img/characters/heather.jpg" alt="海瑟 Heather">
+          </div>
+          <div class="avatar-name">海瑟</div>
+          <div class="avatar-role">支援 / 觀察敏銳</div>
+          <div class="avatar-status">狀態：OK</div>
+        </div>
+
+        <div class="avatar-card" data-char="dean">
+          <div class="avatar-img-wrap">
+            <img src="img/characters/dean.jpg" alt="迪恩 Dean">
+          </div>
+          <div class="avatar-name">迪恩</div>
+          <div class="avatar-role">防線 / 擋第一排</div>
+          <div class="avatar-status">狀態：疲勞</div>
+        </div>
+
+        <div class="avatar-card" data-char="isaac">
+          <div class="avatar-img-wrap">
+            <img src="img/characters/isaac.jpg" alt="艾薩克 Isaac">
+          </div>
+          <div class="avatar-name">艾薩克</div>
+          <div class="avatar-role">遠程 / 老經驗</div>
+          <div class="avatar-status">狀態：受傷</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="accept-btn" id="acceptBtn">
+      接下任務 / START MISSION
+    </button>
+  </aside>
+
+</main>
+
+<!-- ====== AUDIO ====== -->
+<audio id="sfxClick" src="audio/ui_click.mp3" preload="auto"></audio>
+<audio id="sfxSelect" src="audio/ui_select.mp3" preload="auto"></audio>
+<audio id="sfxStart" src="audio/ui_start.mp3" preload="auto"></audio>
+<audio id="bgmLoop" src="audio/bgm_loop.mp3" preload="auto" loop></audio>
+
+<script>
+/* =========================
+   0. 角色 / 地點資料
+   ========================= */
+const CHAR_DATA = {
+  rit: {
+    name: "里特",
+    note: "不管大人信不信，我知道有人被帶走了。我不會放著不管。",
+    hint: "里特想直接衝森林，他覺得拖越久，迷路的人就越回不來。"
+  },
+  heather: {
+    name: "海瑟",
+    note: "這裡不是安全，是大家假裝安全。",
+    hint: "她注意到牆上有不屬於小學生的符號，像是大人留下來的監控記號。"
+  },
+  dean: {
+    name: "迪恩",
+    note: "我不怕擋前面，但你們不要亂跑。",
+    hint: "他其實很喘，但他不想讓大家看到他有點撐不住。"
+  },
+  isaac: {
+    name: "艾薩克",
+    note: "我爸還在某個地方等我…我知道他還活著。",
+    hint: "他情報最多，可是身體狀況最差，他不願承認。"
+  }
+};
+
+const LOC_DATA = {
+  school: {
+    name: "蘭薩爾小學",
+    danger: "LOW",
+    thumb: "img/game/thumb_school.jpg",
+    desc: "這是表面上的普通小學，也是目前唯一能假裝「一切還正常」的地方。\n米斯老師把整棟樓當成防護結界。",
+    mission: "保護彼此。\n整理情報，準備出發。\n任何人受傷，先回這裡。",
+    suggest: "里特 / 海瑟 / 迪恩",
+    mapBg: "img/game/season1_map.jpg"
+  },
+  forest: {
+    name: "穆高爾森林入口",
+    danger: "MEDIUM",
+    thumb: "img/game/thumb_forest.jpg",
+    desc: "這裡是傳說開始的地方。\n狼族行蹤最頻繁、也是第一次失蹤事件被確認的點。",
+    mission: "追蹤雪狼。\n確認是否真的有人被帶往更深處，而不是單純迷路。",
+    suggest: "里特 / 艾薩克 / 海瑟",
+    mapBg: "img/game/season1_map_forest.jpg"
+  },
+  lake: {
+    name: "逆轉之湖",
+    danger: "HIGH",
+    thumb: "img/game/thumb_lake.jpg",
+    desc: "湖面會映出『你不想被別人知道的記憶』。\n艾薩克在這裡幾乎崩潰。",
+    mission: "從湖裡取得『殘留記憶影像』，找出艾薩克父親最後出現的位置。",
+    suggest: "里特 / 艾薩克",
+    mapBg: "img/game/season1_map_lake.jpg"
+  },
+  stone: {
+    name: "失去的石墩",
+    danger: "CRITICAL",
+    thumb: "img/game/thumb_stone.jpg",
+    desc: "大人不准提的地方。\n像墓碑，也像路標。\n狼群經過時會低頭，像在道歉。",
+    mission: "確認石墩下方是否藏有被刪除的狼族訊息。\n任何發現都不能大聲說出口。",
+    suggest: "里特 / 海瑟 / 迪恩（遠距觀察）",
+    mapBg: "img/game/season1_map_stone.jpg"
+  }
+};
+
+/* =========================
+   1. DOM 抓節點
+   ========================= */
+const sideLocName   = document.getElementById("sideLocName");
+const sideDanger    = document.getElementById("sideDanger");
+const sideSuggest   = document.getElementById("sideSuggest");
+const sideLocDesc   = document.getElementById("sideLocDesc");
+const sideMission   = document.getElementById("sideMission");
+const sideNote      = document.getElementById("sideNote");
+const sideThumb     = document.getElementById("sideThumb");
+
+const mapBg         = document.getElementById("mapBg");
+
+const logScroll     = document.getElementById("logScroll");
+
+const poiButtons    = document.querySelectorAll(".poi-btn");
+const avatarCards   = document.querySelectorAll(".avatar-card");
+const acceptBtn     = document.getElementById("acceptBtn");
+
+const bgmLoop       = document.getElementById("bgmLoop");
+const sfxClick      = document.getElementById("sfxClick");
+const sfxSelect     = document.getElementById("sfxSelect");
+const sfxStart      = document.getElementById("sfxStart");
+
+const audioToggle   = document.getElementById("audioToggle");
+const bgmStatus     = document.getElementById("bgmStatus");
+
+/* 狀態 */
+let currentChar = "rit";
+let currentLoc  = "school";
+let bgmOn = false;
+
+/* =========================
+   2. UI / 音效工具
+   ========================= */
+function playClick(){ try { sfxClick.currentTime = 0; sfxClick.play(); } catch(e){} }
+function playSelect(){ try { sfxSelect.currentTime = 0; sfxSelect.play(); } catch(e){} }
+function playStart(){ try { sfxStart.currentTime = 0; sfxStart.play(); } catch(e){} }
+
+function toggleBGM(){
+  if(bgmOn){
+    bgmLoop.pause();
+    bgmOn = false;
+    bgmStatus.textContent = "BGM OFF";
+    bgmStatus.classList.remove("active");
+  } else {
+    bgmLoop.currentTime = 0;
+    bgmLoop.play();
+    bgmOn = true;
+    bgmStatus.textContent = "BGM ON";
+    bgmStatus.classList.add("active");
+  }
+}
+audioToggle.addEventListener("click", toggleBGM);
+
+/* =========================
+   3. Log工具
+   ========================= */
+function pushLog(msg){
+  const wrap = document.createElement("div");
+  wrap.className = "log-entry";
+  const t = new Date();
+  const hh = String(t.getHours()).padStart(2,"0");
+  const mm = String(t.getMinutes()).padStart(2,"0");
+  wrap.innerHTML = `
+    <div class="time">[${hh}:${mm}]</div>
+    <div class="msg">${msg.replace(/\n/g,"<br>")}</div>
+  `;
+  logScroll.appendChild(wrap);
+  logScroll.scrollTop = logScroll.scrollHeight;
+}
+
+/* =========================
+   4. 切換地點
+   ========================= */
+function setLocation(locKey){
+  const d = LOC_DATA[locKey];
+  if(!d) return;
+  currentLoc = locKey;
+
+  sideLocName.textContent   = d.name;
+  sideDanger.textContent    = d.danger;
+  sideSuggest.textContent   = d.suggest;
+  sideLocDesc.textContent   = d.desc;
+  sideMission.textContent   = d.mission;
+  sideThumb.style.backgroundImage = `url('${d.thumb}')`;
+
+  if(d.mapBg){
+    mapBg.style.backgroundImage = `url('${d.mapBg}')`;
+  }
+
+  // 按鈕active狀態
+  poiButtons.forEach(b=>b.classList.remove("active"));
+  const activeBtn = document.querySelector(`.poi-btn[data-loc="${locKey}"]`);
+  if(activeBtn) activeBtn.classList.add("active");
+
+  pushLog(`[MAP] ${d.name} 情資已載入。危險等級：${d.danger}`);
+  playClick();
+}
+
+/* =========================
+   5. 切換角色
+   ========================= */
+function setCharacter(charKey){
+  const c = CHAR_DATA[charKey];
+  if(!c) return;
+  currentChar = charKey;
+
+  // 把角色觀察塞到 sideNote 區
+  sideNote.textContent = `「${c.note}」`;
+
+  // 先刪除舊 hint（sideNote 後面自動加一段）
+  while(sideNote.nextSibling){
+    sideNote.nextSibling.remove();
+  }
+  const hintEl = document.createElement("div");
+  hintEl.style.marginTop = "6px";
+  hintEl.style.fontSize = "11px";
+  hintEl.style.color = "#ccc";
+  hintEl.style.lineHeight = "1.5";
+  hintEl.textContent = c.hint;
+  sideNote.parentNode.appendChild(hintEl);
+
+  // 視覺 active
+  avatarCards.forEach(a=>a.classList.remove("active"));
+  const card = document.querySelector(`.avatar-card[data-char="${charKey}"]`);
+  if(card) card.classList.add("active");
+
+  pushLog(`[TEAM] ${c.name}：${c.note}`);
+  playSelect();
+}
+
+/* =========================
+   6. START MISSION
+   ========================= */
+function startMission(){
+  const c = CHAR_DATA[currentChar];
+  const l = LOC_DATA[currentLoc];
+  const firstLineOfMission = l.mission.split("\n")[0] || l.mission;
+  const report = `系統：${c.name} 已帶隊前往「${l.name}」。目標：「${firstLineOfMission}」`;
+  pushLog(report);
+  playStart();
+}
+
+/* =========================
+   7. 綁事件
+   ========================= */
+poiButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const id = btn.dataset.loc;
+    setLocation(id);
+  });
+});
+
+avatarCards.forEach(card=>{
+  card.addEventListener("click", ()=>{
+    const key = card.dataset.char;
+    setCharacter(key);
+  });
+});
+
+acceptBtn.addEventListener("click", ()=>{
+  startMission();
+});
+
+/* =========================
+   8. 粒子特效 (雪/能量粉塵)
+   ========================= */
+(function initFX(){
+  const canvas = document.getElementById("fxCanvas");
+  const ctx = canvas.getContext("2d");
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+
+  const dots = [];
+  const COUNT = 140;
+
+  function rand(min,max){return Math.random()*(max-min)+min;}
+
+  function makeDots(){
+    for(let i=0;i<COUNT;i++){
+      dots.push({
+        x: rand(0,w),
+        y: rand(0,h),
+        r: rand(1,2.5),
+        vx: rand(-0.3,0.3),
+        vy: rand(0.3,1.0),
+        a: rand(0.2,0.8)
+      });
+    }
+  }
+
+  function step(){
+    ctx.clearRect(0,0,w,h);
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    dots.forEach(d=>{
+      ctx.globalAlpha = d.a;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fill();
+      d.x += d.vx;
+      d.y += d.vy;
+      if(d.y>h){d.y=-10; d.x=Math.random()*w;}
+      if(d.x> w) d.x=0;
+      if(d.x< 0) d.x=w;
+    });
+    ctx.restore();
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("resize",()=>{
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  makeDots();
+  step();
+})();
+
+/* =========================
+   9. 預設初始化
+   ========================= */
+setLocation("school"); // 同步右側 + 地圖底圖
+setCharacter("rit");   // 同步 sideNote 等
+pushLog("系統：請先選擇地點，檢視當前情資。");
+
+</script>
+</body>
+</html>

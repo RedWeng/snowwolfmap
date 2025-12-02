@@ -1,0 +1,4 @@
+{
+  "invoke": { "C": 1, "E": 0, "T": 1, "item": "聖徽", "sfx": ["audio/sfx/rune_whoom.wav","audio/sfx/blessing_shimmer.wav"] },
+  "offering": { "coins": -20, "C": 0, "E": 1, "T": 1, "reward": "冰晶碎片" }
+}

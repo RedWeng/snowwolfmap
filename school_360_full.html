@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>蘭薩爾小學 RPG v4.0</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.105.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/panolens@0.12.0/build/panolens.min.js"></script>
+
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:"Noto Sans TC","PingFang TC",sans-serif;color:#e7eefb;}
+#panoMount{position:fixed;inset:0;z-index:0;}
+#ui{position:fixed;inset:0;z-index:10;pointer-events:none;}
+button{pointer-events:auto;cursor:pointer;}
+.topbar{position:absolute;top:12px;left:18px;right:18px;display:flex;gap:12px;z-index:20;}
+.chip{background:#0f1726;color:#e7eefb;border:1px solid #223553;border-radius:999px;padding:8px 12px;font-size:13px;}
+.chip:hover{background:#223553;}
+.hud{position:absolute;top:58px;left:18px;display:flex;gap:18px;z-index:20;}
+.bars{display:flex;gap:18px;}
+.bar{width:180px;}
+.bar label{font-size:12px;}
+.meter{height:6px;background:#112;color:#9ad6ff;border-radius:8px;overflow:hidden;}
+.meter span{display:block;height:100%;background:linear-gradient(90deg,#4aa3ff,#9ad6ff);width:25%;}
+#hotspots{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:12px;z-index:15;flex-wrap:wrap;justify-content:center;}
+.hotbtn{background:rgba(10,18,35,.8);color:#dff2ff;border:1px solid #27426e;padding:10px 14px;border-radius:14px;}
+.hotbtn:hover{background:#355c9a;}
+.dialog{position:fixed;left:18px;right:18px;bottom:88px;background:rgba(10,20,35,.9);border-radius:22px;padding:16px 22px;display:flex;align-items:flex-end;gap:16px;z-index:30;}
+.avatar img{width:88px;height:88px;border-radius:16px;}
+.dtext{flex:1;}
+.who{font-weight:bold;font-size:18px;}
+.line{font-size:17px;margin-top:6px;}
+.btn{background:#173055;color:#fff;border:none;border-radius:12px;padding:10px 14px;}
+.btn:hover{background:#295a9c;}
+#questPanel{position:fixed;top:100px;right:20px;background:rgba(10,18,30,.8);border:1px solid #20314c;border-radius:14px;padding:12px 16px;z-index:25;}
+#questList{list-style:none;padding:0;margin:0;}
+#questList li{margin:4px 0;}
+.shortcut{position:fixed;left:18px;bottom:18px;display:flex;gap:10px;z-index:40;}
+.shortcut .chip{background:#0f2747cc;border-color:#2e507e;}
+.toast{position:fixed;right:18px;bottom:18px;background:#0c1a30;color:#dff2ff;padding:10px 14px;border-radius:10px;display:none;z-index:999;}
+#popup{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:200;}
+#popupContent{background:#122;padding:20px;border-radius:14px;text-align:center;min-width:320px;}
+</style>
+</head>
+<body>
+
+<div id="panoMount"></div>
+
+<div id="ui">
+
+  <div class="topbar">
+    <button id="btnHome" class="chip">🏠 艾薩克的家</button>
+    <button id="btnWardrobe" class="chip">🧥 衣櫃</button>
+    <button id="btnItems" class="chip">🎒 道具</button>
+    <div style="flex:1;"></div>
+    <button id="exploreBtn" class="chip">🧭 探索模式</button>
+  </div>
+
+  <div class="hud">
+    <div class="bars">
+      <div class="bar"><label>勇氣</label><div class="meter"><span id="mC"></span></div></div>
+      <div class="bar"><label>同理</label><div class="meter"><span id="mE"></span></div></div>
+      <div class="bar"><label>真實</label><div class="meter"><span id="mT"></span></div></div>
+    </div>
+  </div>
+
+  <div id="hotspots">
+    <button class="hotbtn" data-pan="gate">校門口</button>
+    <button class="hotbtn" data-pan="music">音樂教室</button>
+    <button class="hotbtn" data-pan="art">美術教室</button>
+    <button class="hotbtn" data-pan="library">圖書館</button>
+    <button class="hotbtn" data-pan="playground">操場</button>
+    <button class="hotbtn" data-pan="principal">校長室</button>
+  </div>
+
+  <div class="dialog">
+    <div class="avatar"><img src="img/avatars/heather.png" alt=""></div>
+    <div class="dtext">
+      <div id="who" class="who">海瑟</div>
+      <div id="line" class="line">「回到蘭薩爾小學……空氣都變得溫暖了。」</div>
+    </div>
+    <button id="next" class="btn">下一句 ▶</button>
+  </div>
+
+  <div id="questPanel">
+    <h3>任務清單</h3>
+    <ul id="questList">
+      <li>🎨 美術任務</li>
+      <li>🎵 音樂任務</li>
+      <li>📖 閱讀任務</li>
+      <li>⚙️ 體動任務</li>
+      <li>👑 校長任務</li>
+    </ul>
+  </div>
+
+  <div class="shortcut">
+    <button class="chip" onclick="showToast('🏫 進入宿舍畫面（之後開新頁）')">🏫 宿舍</button>
+    <button class="chip" onclick="showToast('📜 查看布告欄')">📜 布告欄</button>
+    <button class="chip" onclick="showToast('🏛️ 成就殿堂尚未開放')">🏛️ 成就殿堂</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- 衣櫃與道具視窗 -->
+  <div id="popup">
+    <div id="popupContent">
+      <h3 id="popupTitle">標題</h3>
+      <p id="popupBody">內容</p>
+      <button id="closePopup" class="btn">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === Panorama === */
+let viewer,currentPano;
+const panoMount=document.getElementById("panoMount");
+const PANO={
+  gate:"img/360/school_gate_360.jpg",
+  music:"img/360/school_music_360.jpg",
+  art:"img/360/school_art_360.jpg",
+  library:"img/360/school_library_360.jpg",
+  playground:"img/360/school_playground_360.jpg",
+  principal:"img/360/school_office_360.jpg",
+  home:"img/360/school_dorm_360.jpg" // ← 新增艾薩克的家
+};
+function ensureViewer(){
+  if(!viewer){
+    viewer=new PANOLENS.Viewer({container:panoMount,controlBar:false,autoHideInfospot:true,cameraFov:75});
+    viewer.container.style.pointerEvents='none';
+  }
+  return viewer;
+}
+function loadPano(name){
+  const v=ensureViewer();
+  const url=PANO[name];
+  if(currentPano){try{v.remove(currentPano);}catch{} currentPano.dispose&&currentPano.dispose();}
+  currentPano=new PANOLENS.ImagePanorama(url);
+  v.add(currentPano);v.setPanorama(currentPano);
+}
+document.querySelectorAll(".hotbtn").forEach(b=>b.onclick=()=>loadPano(b.dataset.pan));
+loadPano("gate");
+
+/* === 對話 === */
+const dialogue=[
+  {n:"海瑟",t:"「回到蘭薩爾小學……空氣都變得溫暖了。」"},
+  {n:"艾薩克",t:"「這裡真的好久沒來了，我好懷念。」"},
+  {n:"海瑟",t:"「我們去看看新的音樂教室吧！」"},
+];
+let idx=0;
+document.getElementById("next").onclick=()=>{
+  idx++;
+  if(idx>=dialogue.length){idx=0;}
+  document.getElementById("who").textContent=dialogue[idx].n;
+  document.getElementById("line").textContent=dialogue[idx].t;
+};
+
+/* === 上方功能鍵 === */
+document.getElementById("btnHome").onclick=()=>{loadPano("home");showToast("🏠 進入艾薩克的家");};
+document.getElementById("btnItems").onclick=()=>{openPopup("道具清單","🔹 雪狼珍珠<br>🔹 芒草<br>🔹 藍莓果乾");};
+document.getElementById("btnWardrobe").onclick=()=>{openPopup("衣櫃","選擇服裝：<br>❄️ 冬季外套<br>🌸 春日校服<br>🌲 森林風斗篷");};
+
+/* === 探索模式 === */
+let exploring=false;
+document.getElementById("exploreBtn").onclick=()=>{
+  exploring=!exploring;
+  showToast(exploring?"🧭 探索模式開啟（暫時展示）":"📘 返回對話模式");
+};
+
+/* === Popup === */
+const popup=document.getElementById("popup");
+const popupTitle=document.getElementById("popupTitle");
+const popupBody=document.getElementById("popupBody");
+document.getElementById("closePopup").onclick=()=>popup.style.display="none";
+function openPopup(title,body){
+  popupTitle.innerHTML=title;
+  popupBody.innerHTML=body;
+  popup.style.display="flex";
+}
+
+/* === Toast === */
+function showToast(t){
+  const n=document.getElementById("toast");
+  n.textContent=t;n.style.display='block';
+  setTimeout(()=>n.style.display='none',1500);
+}
+</script>
+</body>
+</html>

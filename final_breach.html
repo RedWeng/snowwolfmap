@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FINAL BREACH // CORE RETRIEVAL</title>
+<style>
+  *{
+    box-sizing:border-box;
+    font-family:"Noto Sans TC", system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  }
+
+  :root{
+    --cyan:#8bb7ff;
+    --cyan-glow:rgba(139,183,255,.8);
+    --danger:#ff4f7d;
+    --danger-glow:rgba(255,79,125,.7);
+    --bg-deep:#00010f;
+  }
+
+  body{
+    margin:0;
+    background:var(--bg-deep);
+    color:#fff;
+    min-height:100vh;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /************
+   BACKGROUND
+  *************/
+  .bg-layer{
+    position:fixed;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 60%,rgba(0,0,0,.0) 0%,rgba(0,0,0,.7) 70%),
+      radial-gradient(circle at 30% 30%,rgba(120,180,255,.18) 0%,transparent 70%),
+      radial-gradient(circle at 70% 40%,rgba(255,80,150,.12) 0%,transparent 70%),
+      url("img/final/rift_bg.jpg") center/cover no-repeat,
+      radial-gradient(circle at 50% 50%,#050510 0%,#000 70%);
+    filter:brightness(1.05) saturate(1.2);
+    z-index:0;
+  }
+
+  /* HUD scanlines + subtle flicker */
+  .scan-overlay{
+    position:fixed;
+    inset:0;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,.07) 0px,
+        rgba(255,255,255,0) 2px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,0,0,0) 4px
+      );
+    mix-blend-mode:screen;
+    opacity:.07;
+    pointer-events:none;
+    animation:flicker .2s steps(2,end) infinite;
+    z-index:1;
+  }
+  @keyframes flicker{
+    0%{opacity:.07;}
+    50%{opacity:.03;}
+    100%{opacity:.07;}
+  }
+
+  /* moving scanline beam */
+  .scanline{
+    position:fixed;
+    left:0;right:0;
+    height:2px;
+    background:radial-gradient(circle at 50% 50%,rgba(139,183,255,.8) 0%,rgba(139,183,255,0) 70%);
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    filter:drop-shadow(0 0 6px rgba(139,183,255,.8));
+    mix-blend-mode:screen;
+    opacity:.4;
+    pointer-events:none;
+    z-index:2;
+    animation:scanDown 4s linear infinite;
+  }
+  @keyframes scanDown{
+    0%{top:0%;}
+    100%{top:100%;}
+  }
+
+  /* flying snow/embers */
+  canvas#fxCanvas{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:3;
+  }
+
+  /************
+   TOP HUD
+  *************/
+  .top-hud{
+    position:fixed;
+    left:50%;
+    top:4vh;
+    transform:translateX(-50%);
+    text-align:center;
+    z-index:10;
+    max-width:90%;
+  }
+  .ep-label{
+    font-size:12px;
+    color:var(--cyan);
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    font-weight:600;
+    text-shadow:
+      0 0 8px var(--cyan-glow),
+      0 0 24px rgba(139,183,255,.4);
+  }
+  .ep-title{
+    margin-top:8px;
+    font-size:clamp(20px,2.2vw,28px);
+    line-height:1.4;
+    font-weight:600;
+    color:#fff;
+    text-shadow:
+      0 0 16px rgba(160,200,255,.8),
+      0 0 48px rgba(160,200,255,.4),
+      0 0 80px rgba(160,200,255,.2);
+  }
+  .ep-sub{
+    margin-top:6px;
+    font-size:12px;
+    line-height:1.4;
+    color:#8e94c7;
+    text-shadow:0 0 8px rgba(0,0,0,.8);
+  }
+
+  /************
+   COUNTDOWN / CORE
+  *************/
+  .core-wrap{
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:min(420px,90vw);
+    max-width:90vw;
+    text-align:center;
+    z-index:20;
+  }
+
+  .ring-outer{
+    position:relative;
+    width:100%;
+    padding-top:100%;
+    border-radius:50%;
+    box-shadow:
+      0 0 40px rgba(139,183,255,.6),
+      0 60px 120px rgba(0,0,0,.9);
+    animation:ringPulse 2.5s ease-in-out infinite;
+    border:2px solid rgba(139,183,255,.4);
+    background:
+      radial-gradient(circle at 50% 50%,rgba(0,0,0,.6) 0%,rgba(0,0,0,0) 70%);
+  }
+  @keyframes ringPulse{
+    0%{ box-shadow:0 0 30px rgba(139,183,255,.6),0 60px 120px rgba(0,0,0,.9);}
+    50%{ box-shadow:0 0 60px rgba(139,183,255,1),0 80px 160px rgba(0,0,0,1);}
+    100%{ box-shadow:0 0 30px rgba(139,183,255,.6),0 60px 120px rgba(0,0,0,.9);}
+  }
+
+  .ring-outer::before,
+  .ring-outer::after{
+    content:"";
+    position:absolute;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%;
+    pointer-events:none;
+  }
+  .ring-outer::before{
+    width:70%;
+    height:70%;
+    border:1px solid rgba(139,183,255,.4);
+    box-shadow:0 0 20px rgba(139,183,255,.5);
+  }
+  .ring-outer::after{
+    width:40%;
+    height:40%;
+    border:1px dashed rgba(139,183,255,.3);
+    box-shadow:0 0 12px rgba(139,183,255,.4);
+  }
+
+  .core-inner{
+    position:absolute;
+    left:50%;top:50%;
+    transform:translate(-50%,-50%);
+    width:72%;
+    max-width:240px;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(139,183,255,.6);
+    border-radius:12px;
+    box-shadow:
+      0 0 24px rgba(120,180,255,.8),
+      0 30px 60px rgba(0,0,0,.9);
+    padding:16px 14px;
+    text-align:left;
+    pointer-events:auto;
+  }
+
+  .core-label{
+    font-size:10px;
+    font-weight:600;
+    color:var(--cyan);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px var(--cyan-glow);
+  }
+  .core-target{
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    line-height:1.4;
+    margin-top:4px;
+    text-shadow:0 0 12px rgba(150,200,255,.9);
+  }
+  .core-desc{
+    font-size:12px;
+    line-height:1.5;
+    margin-top:10px;
+    color:#fff;
+    white-space:pre-line;
+    text-shadow:0 0 8px rgba(0,0,0,.9);
+  }
+  .risk-row{
+    font-size:11px;
+    line-height:1.4;
+    margin-top:12px;
+    color:#fff;
+  }
+  .risk-label{
+    color:#ffb7c9;
+    font-weight:600;
+    text-shadow:0 0 8px var(--danger-glow);
+  }
+  .risk-tag{
+    display:inline-block;
+    margin-left:6px;
+    padding:2px 6px;
+    border-radius:6px;
+    border:1px solid var(--danger);
+    color:var(--danger);
+    font-weight:600;
+    text-shadow:0 0 8px var(--danger);
+    box-shadow:0 0 18px var(--danger-glow);
+  }
+
+  .countdown-wrap{
+    text-align:center;
+    margin-top:16px;
+    font-size:11px;
+    line-height:1.4;
+    color:#fff;
+  }
+  .countdown-label{
+    color:var(--danger);
+    text-shadow:0 0 8px var(--danger-glow);
+    font-weight:600;
+    letter-spacing:.15em;
+  }
+  .count-bar{
+    position:relative;
+    width:100%;
+    height:6px;
+    background:rgba(255,255,255,.08);
+    border-radius:4px;
+    box-shadow:0 0 12px rgba(0,0,0,.8);
+    margin-top:6px;
+    overflow:hidden;
+  }
+  .count-bar-fill{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:100%;
+    background:linear-gradient(to right,#ff4f7d 0%,#570012 100%);
+    box-shadow:0 0 12px var(--danger),0 0 24px rgba(255,0,80,.6);
+    animation:timerDrain 12s linear forwards;
+    transform-origin:left center;
+  }
+  @keyframes timerDrain{
+    0%{width:100%;}
+    100%{width:0%;}
+  }
+
+  /************
+   BIG RED BUTTON
+  *************/
+  .deploy-wrap{
+    margin-top:20px;
+    text-align:center;
+  }
+  .deploy-btn{
+    position:relative;
+    background:rgba(0,0,0,.7);
+    border:1px solid var(--danger);
+    border-radius:20px;
+    padding:16px 20px;
+    font-size:14px;
+    color:#fff;
+    cursor:pointer;
+    text-shadow:0 0 12px var(--danger);
+    box-shadow:
+      0 0 24px var(--danger-glow),
+      0 60px 120px rgba(0,0,0,1);
+    letter-spacing:.08em;
+    min-width:260px;
+    animation:panicBlink 1s steps(2,end) infinite;
+  }
+  @keyframes panicBlink{
+    0%{box-shadow:0 0 24px var(--danger-glow),0 60px 120px rgba(0,0,0,1);}
+    50%{box-shadow:0 0 48px var(--danger),0 80px 160px rgba(0,0,0,1);}
+    100%{box-shadow:0 0 24px var(--danger-glow),0 60px 120px rgba(0,0,0,1);}
+  }
+  .deploy-btn:hover{
+    background:rgba(255,0,60,.08);
+  }
+  .deploy-hint{
+    margin-top:10px;
+    font-size:11px;
+    color:#ffb7c9;
+    line-height:1.4;
+    text-shadow:0 0 8px var(--danger-glow);
+  }
+
+  /************
+   SIDE PANELS
+  *************/
+  .side-left,
+  .side-right{
+    position:fixed;
+    top:18vh;
+    width:260px;
+    max-width:42vw;
+    font-size:12px;
+    line-height:1.5;
+    color:#fff;
+    z-index:12;
+  }
+  .side-left{
+    left:2vw;
+  }
+  .side-right{
+    right:2vw;
+    text-align:right;
+  }
+
+  .status-card{
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:12px;
+    box-shadow:
+      0 0 24px rgba(120,180,255,.6),
+      0 40px 80px rgba(0,0,0,.9);
+    padding:12px 14px;
+    margin-bottom:16px;
+    backdrop-filter:blur(4px);
+    position:relative;
+  }
+
+  .status-title{
+    font-size:11px;
+    font-weight:600;
+    color:var(--cyan);
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    text-shadow:0 0 8px var(--cyan-glow);
+  }
+
+  .status-body{
+    margin-top:6px;
+    font-size:12px;
+    color:#fff;
+    text-shadow:0 0 8px rgba(0,0,0,.8);
+    white-space:pre-line;
+  }
+
+  .status-warn{
+    color:var(--danger);
+    text-shadow:0 0 8px var(--danger),0 0 20px rgba(255,0,80,.6);
+    font-weight:600;
+  }
+
+  .mini-btn-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+
+  .mini-btn{
+    flex:1 1 auto;
+    text-align:center;
+    font-size:11px;
+    padding:6px 8px;
+    background:rgba(0,0,0,.6);
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:6px;
+    box-shadow:0 0 16px rgba(139,183,255,.6),0 20px 40px rgba(0,0,0,.9);
+    cursor:pointer;
+    text-shadow:0 0 8px rgba(150,200,255,.8);
+    color:#fff;
+  }
+  .mini-btn.danger{
+    border-color:var(--danger);
+    box-shadow:0 0 16px var(--danger-glow),0 20px 40px rgba(0,0,0,.9);
+    color:#ffb7c9;
+    text-shadow:0 0 8px var(--danger);
+  }
+
+  /************
+   FOOTER NAV
+  *************/
+  .footer-nav{
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:15;
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    justify-content:center;
+  }
+  .nav-btn{
+    background:rgba(0,0,0,.6);
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:12px;
+    color:#fff;
+    cursor:pointer;
+    min-width:120px;
+    text-align:center;
+    text-shadow:0 0 8px rgba(150,200,255,.8);
+    box-shadow:0 0 16px rgba(120,180,255,.8),0 40px 80px rgba(0,0,0,.9);
+  }
+  .nav-btn:hover{
+    background:rgba(139,183,255,.15);
+    box-shadow:0 0 24px rgba(150,200,255,1),0 60px 120px rgba(0,0,0,1);
+  }
+
+  /* responsive: side panels stack lower screens */
+  @media(max-width:900px){
+    .side-left,
+    .side-right{
+      position:static;
+      width:auto;
+      max-width:none;
+      text-align:left;
+    }
+    .side-right{margin-top:24px;}
+    .footer-nav{
+      bottom:8px;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- 背景層 -->
+<div class="bg-layer"></div>
+<div class="scan-overlay"></div>
+<div class="scanline"></div>
+<canvas id="fxCanvas"></canvas>
+
+<!-- 頂部章節資訊 -->
+<header class="top-hud">
+  <div class="ep-label">EPISODE_01 // 第一季</div>
+  <div class="ep-title">「最後狼性任務」</div>
+  <div class="ep-sub">
+    CORE RETRIEVAL PROTOCOL // LVL-RED<br>
+    如果啟動裂隙，這條時間線可能「折掉」。<br>
+    但你可以把他帶回來。
+  </div>
+</header>
+
+<!-- 狼心魔幻 / 倒數 / 大紅按鈕 -->
+<section class="core-wrap">
+
+  <div class="ring-outer">
+    <div class="core-inner">
+      <div class="core-label">TARGET OBJECTIVE</div>
+      <div class="core-target">回收8:23分48秒 · Isaac's Father</div>
+
+      <div class="core-desc">
+        「被帶走的那一刻」。
+        你們必須把那段意識捲回來，鎖到穩定容器裡。
+        這動作超出蘭薩爾小學守則，沒有人會救你們。
+      </div>
+
+      <div class="risk-row">
+        <span class="risk-label">結果風險</span>
+        <span class="risk-tag">不可逆</span><br>
+        如果任務中斷：當前時間線將被標記為「無法修復」。
+      </div>
+
+      <div class="countdown-wrap">
+        <div class="countdown-label">穩定剩餘視窗 // 00:12</div>
+        <div class="count-bar"><div class="count-bar-fill"></div></div>
+      </div>
+
+      <div class="deploy-wrap">
+        <div class="deploy-btn" id="deployBtn">
+          PULL THE MEMORY CORE / 啟動裂隙
+        </div>
+        <div class="deploy-hint" id="deployHint">
+          注意：一旦啟動，撤離路徑將改寫。<br>
+          「回家」可能不再是原本的家。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- 左側情境警報 -->
+<aside class="side-left">
+  <div class="status-card">
+    <div class="status-title">SQUAD STATUS</div>
+    <div class="status-body">
+      里特：拒絕撤離，情緒失控邊緣。  
+      海瑟：穩定，但手在抖。  
+      迪恩：失血、但仍在擋正面。  
+      艾薩克：腿傷 + 幾近崩潰。
+    </div>
+  </div>
+
+  <div class="status-card">
+    <div class="status-title">心理 / 通訊</div>
+    <div class="status-body">
+      「我拜託你們不要放棄他…他一定還活著…」  
+      <span class="status-warn">— 艾薩克</span>
+    </div>
+    <div class="mini-btn-row">
+      <div class="mini-btn">安撫訊息</div>
+      <div class="mini-btn danger">強制鎮定</div>
+    </div>
+  </div>
+</aside>
+
+<!-- 右側系統警告 -->
+<aside class="side-right">
+  <div class="status-card">
+    <div class="status-title">系統預測</div>
+    <div class="status-body">
+      如果你回到逆轉之湖，  
+      目標可能不再是「失蹤者」，而是「仍在場的人」。  
+      也就是說：他回來了，但誰離開？
+    </div>
+  </div>
+
+  <div class="status-card">
+    <div class="status-title">AI 建議</div>
+    <div class="status-body">
+      建議執行任務。<br>
+      請確認你承受後果的對象是「你」，不是「他們」。
+    </div>
+    <div class="mini-btn-row">
+      <div class="mini-btn" onclick="window.location.href='character_comm_panel.html'">查看個別狀態</div>
+      <div class="mini-btn" onclick="window.location.href='combat_fullscreen.html'">返回現場視角</div>
+    </div>
+  </div>
+</aside>
+
+<!-- 底部導覽 -->
+<footer class="footer-nav">
+  <div class="nav-btn" onclick="alert('BGM toggle mock')">BGM OFF</div>
+  <div class="nav-btn" onclick="window.location.href='mission_brief.html'">← 任務簡報</div>
+  <div class="nav-btn" onclick="window.location.href='season1_game.html'">← 回地圖</div>
+</footer>
+
+<script>
+/* 粒子特效 - 飄雪 / 能量碎光 */
+(function initFX(){
+  const canvas = document.getElementById("fxCanvas");
+  const ctx = canvas.getContext("2d");
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+
+  const dots=[];
+  const COUNT=160;
+  function r(min,max){return Math.random()*(max-min)+min;}
+
+  function make(){
+    for(let i=0;i<COUNT;i++){
+      dots.push({
+        x:r(0,w),
+        y:r(0,h),
+        vx:r(-0.2,0.2),
+        vy:r(0.4,1.2),
+        r:r(1,2.4),
+        a:r(0.3,0.9)
+      });
+    }
+  }
+
+  function step(){
+    ctx.clearRect(0,0,w,h);
+    ctx.save();
+    ctx.fillStyle="#fff";
+    dots.forEach(d=>{
+      ctx.globalAlpha=d.a;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+      ctx.fill();
+      d.x+=d.vx;
+      d.y+=d.vy;
+      if(d.y>h){d.y=-10; d.x=Math.random()*w;}
+      if(d.x> w) d.x=0;
+      if(d.x< 0) d.x=w;
+    });
+    ctx.restore();
+    requestAnimationFrame(step);
+  }
+
+  window.addEventListener("resize",()=>{
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  make();
+  step();
+})();
+
+/* 大紅按鈕互動（只是視覺反饋） */
+const deployBtn   = document.getElementById('deployBtn');
+const deployHint  = document.getElementById('deployHint');
+
+deployBtn.addEventListener('click', ()=>{
+  deployHint.textContent = "裂隙啟動中… 記憶核心正在抽離目前時間線。";
+  deployHint.style.color = "#fff";
+  deployHint.style.textShadow = "0 0 8px rgba(255,255,255,.9),0 0 24px rgba(255,255,255,.4)";
+  deployBtn.textContent = "PROCESSING...";
+  deployBtn.style.animation = "panicBlink .25s steps(2,end) infinite";
+});
+</script>
+
+</body>
+</html>

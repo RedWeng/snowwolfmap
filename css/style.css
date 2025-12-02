@@ -1,0 +1,287 @@
+/* ============================================================
+   Aurora Gold HUD Style
+   for SnowWolf HUB v6.1 FINAL
+   ============================================================ */
+
+:root {
+  --bg: #050a14;
+  --panel: #101c2b;
+  --accent: #9ad6ff;
+  --gold: #e2c891;
+  --text: #e6f3ff;
+  --muted: #7a8ba3;
+}
+
+/* Reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  overflow: hidden;
+}
+
+/* ===== 背景層 ===== */
+#panoWrap {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  background: #000;
+}
+#panoMount { width: 100%; height: 100%; }
+
+/* ===== 雪特效層 ===== */
+#snow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5; /* ❄️ 比背景高，比粒子低 */
+}
+
+/* ===== 頂部導覽列 ===== */
+.topbar {
+  position: fixed;
+  top: 10px; left: 10px; right: 10px;
+  display: flex; align-items: center;
+  gap: 10px; z-index: 20;
+}
+.chip {
+  background: var(--panel);
+  border: 1px solid #20304a;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.chip:hover { background: #1a2e48; color: var(--gold); }
+.spacer { flex-grow: 1; }
+
+/* ===== HUD 狀態條 ===== */
+#hud {
+  position: fixed; top: 48px; left: 12px;
+  display: flex; gap: 12px; z-index: 20;
+}
+.attr {
+  background: var(--panel);
+  border: 1px solid #1d2a3a;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--gold);
+}
+.attr span { display: block; font-size: 12px; color: var(--muted); }
+
+/* ===== 任務清單 ===== */
+#questBox {
+  position: fixed; right: 20px; top: 80px;
+  width: 240px;
+  background: rgba(10, 18, 30, 0.8);
+  border: 1px solid #22344a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  backdrop-filter: blur(6px);
+  z-index: 30;
+}
+#questBox h4 { color: var(--gold); margin-bottom: 8px; font-size: 15px; }
+#questList { list-style: none; font-size: 13px; line-height: 1.6; color: var(--text); }
+
+/* ===== 場景按鈕 ===== */
+#sceneBtns {
+  position: fixed;
+  bottom: 190px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 12px;
+  z-index: 55;
+}
+.hotbtn {
+  background: rgba(20, 32, 55, 0.85);
+  border: 1px solid #203650;
+  border-radius: 20px;
+  padding: 8px 18px;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.hotbtn:hover { background: #1a2c45; color: var(--gold); }
+
+/* ===== 快捷列 ===== */
+.shortcut {
+  position: fixed;
+  left: 12px;
+  bottom: 180px;
+  display: flex; gap: 10px;
+  z-index: 60;
+}
+.shortcut .chip { background: var(--panel); border-color: #20304a; transition: 0.25s; }
+.shortcut .chip:hover { background: #1a2e48; color: var(--gold); }
+
+/* ===== 對話框 ===== */
+.dialog {
+  position: fixed;
+  left: 0; bottom: 0;
+  width: 100%;
+  background: rgba(5, 10, 20, 0.9);
+  border-top: 1px solid #1f2a40;
+  display: flex; align-items: center;
+  padding: 20px 28px; gap: 18px;
+  z-index: 100; /* 💬 保證最上層 */
+  animation: fadeIn 0.6s ease forwards;
+}
+.avatar {
+  width: 88px; height: 88px;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 0 10px rgba(146,198,255,0.4);
+  flex-shrink: 0; position: relative;
+}
+.avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+.text { flex: 1; }
+.who { font-weight: bold; color: var(--gold); font-size: 16px; margin-bottom: 6px; }
+.line { font-size: 15px; color: var(--text); min-height: 28px; letter-spacing: 0.5px; }
+.btn {
+  background: #0f2747;
+  color: #e8f3ff;
+  border: 1px solid #234469;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.btn:hover { background: #1b365a; color: var(--gold); }
+
+/* ===== 動畫 ===== */
+@keyframes fadeIn { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+@keyframes pulseGlow {
+  0%,100%{box-shadow:0 0 6px rgba(146,198,255,0.3);}
+  50%{box-shadow:0 0 18px rgba(226,200,145,0.6);}
+}
+
+/* ===== FX Layer Base ===== */
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+.fx-show { opacity: 1; }
+
+/* --- 校門口：大雪暴風 --- */
+#fx_snowstorm {
+  background-image: url("fx/snow_particle.png");
+  animation: snowstorm 20s linear infinite;
+  background-size: 200px 200px;
+}
+@keyframes snowstorm {
+  0% { background-position: 0 0; opacity:.9; }
+  100% { background-position: -200px 1000px; opacity:1; }
+}
+
+/* --- 操場：濃霧層 --- */
+#fx_fog {
+  background: radial-gradient(circle at 30% 40%, rgba(180,200,220,.25), transparent 70%),
+              radial-gradient(circle at 70% 60%, rgba(200,220,240,.25), transparent 70%);
+  filter: blur(20px);
+  animation: fogMove 60s linear infinite;
+}
+@keyframes fogMove {
+  0%{transform:translate(0,0);opacity:.5;}
+  50%{transform:translate(20px,10px);opacity:.6;}
+  100%{transform:translate(0,0);opacity:.5;}
+}
+
+/* --- 校長室：火花 --- */
+#fx_spark::before,#fx_spark::after{
+  content:"";
+  position:absolute;
+  width:4px;height:4px;
+  background: radial-gradient(circle, #9ad6ff, transparent);
+  border-radius:50%;
+  box-shadow: 0 0 10px #9ad6ff, 0 0 20px #e2c891;
+  animation: sparks 3s linear infinite;
+}
+@keyframes sparks {
+  0%{transform:translate(10%,90%) scale(0.5);opacity:0.6;}
+  50%{transform:translate(70%,20%) scale(1);opacity:1;}
+  100%{transform:translate(10%,90%) scale(0.5);opacity:0.6;}
+}
+
+/* === ✨ 魔法粒子特效 === */
+#fx_particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6; /* ✨ 比雪略高 */
+  overflow: visible;
+}
+.particle {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,220,255,0.1) 70%);
+  animation: particleFloat ease-in-out infinite;
+  opacity: 0.75;
+  filter: blur(2px);
+}
+@keyframes particleFloat {
+  0% { transform: translateY(100vh) scale(0.6) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  50% { transform: translateY(40vh) scale(1) rotate(180deg); }
+  100% { transform: translateY(-10vh) scale(1.2) rotate(360deg); opacity: 0; }
+}
+
+/* === 層級修正 === */
+#ui { z-index: 10; }
+.dialog { z-index: 100; }
+
+/* === 💫 屬性加成浮動字樣 === */
+#statFloatLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  overflow: visible;
+}
+
+.stat-float {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  font-weight: bold;
+  color: #ffd96a;
+  text-shadow: 0 0 10px #fff5cc, 0 0 30px #ffd96a;
+  animation: floatUp 1.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, -30%) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  60% {
+    transform: translate(-50%, -120%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -200%) scale(1);
+    opacity: 0;
+  }
+}

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>雪狼男孩：艾薩克之家 RPG v2.2</title>
+
+<style>
+body{
+  margin:0;
+  overflow:hidden;
+  font-family:"Noto Sans TC",sans-serif;
+  background:#000;
+  color:#fff;
+}
+
+/* === 背景 === */
+#bgContainer{position:absolute;inset:0;overflow:hidden;z-index:0;}
+.scene-bg{position:absolute;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s ease, transform 2s ease-out;transform:scale(1);}
+.scene-bg.show{opacity:1;transform:scale(1.02);}
+
+/* === 導覽列 === */
+.topbar{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;
+  background:rgba(60,80,120,0.35);
+  border-radius:12px;padding:6px 12px;
+  backdrop-filter:blur(8px);z-index:20;
+}
+.topbar .spacer{flex:1;}
+.chip{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);
+  color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:14px;transition:.3s;}
+.chip:hover{background:rgba(255,255,255,0.25);transform:translateY(-2px);}
+
+/* === HUD === */
+#hud{position:absolute;top:10px;right:10px;display:flex;gap:10px;z-index:25;}
+.attr{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+  padding:4px 12px;border-radius:12px;backdrop-filter:blur(6px);font-size:15px;color:#fff;}
+.attr b{margin-left:5px;color:#9cf;}
+@keyframes flashGain{0%{background:rgba(255,255,255,0.3);}100%{background:rgba(255,255,255,0.1);}}
+
+/* === 對話框 === */
+#dialogueBox{
+  position:fixed;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:auto;
+  min-height:110px;
+  background:rgba(20,30,60,0.78);
+  color:#eef;
+  display:none;
+  z-index:30;
+  padding:16px 20px 46px 20px;  /* 再略壓縮底部 */
+  line-height:1.6;
+  backdrop-filter:blur(8px);
+  box-shadow:0 -4px 16px rgba(0,0,0,0.45);
+  border-top:1px solid rgba(255,255,255,0.12);
+}
+
+#dialogueCharacter{
+  font-weight:bold;
+  font-size:17px;
+  color:#ffd;
+  margin-bottom:6px;
+}
+
+#dialogueText{
+  font-size:15.5px;
+  min-height:48px;
+  margin-right:100px;
+}
+
+/* 下一句按鈕（修正最終版） */
+#nextBtn{
+  position:absolute;
+  right:400px;       /* 往左 30px */
+  bottom:20px;      /* 往上 15px */
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.3);
+  color:#fff;
+  padding:5px 14px 6px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13.5px;
+  line-height:1.3;
+  transition:all 0.25s ease;
+}
+#nextBtn:hover{
+  background:rgba(255,255,255,0.25);
+  transform:translateY(-1px);
+}
+
+
+/* 頭像 */
+#dialoguePortrait{
+  position:fixed;
+  bottom:150px;
+  left:28px;
+  width:84px;
+  height:84px;
+  border-radius:50%;
+  overflow:hidden;
+  display:none;
+  z-index:31;
+  box-shadow:0 0 12px rgba(255,255,255,0.25);
+}
+#dialoguePortrait img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  animation:fadeIn .8s ease;
+}
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+/* === 任務框 === */
+#questBox{
+  position:absolute;
+  right:-200px;
+  bottom:20px;
+  width:240px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:12px;
+  padding:14px 16px;
+  backdrop-filter:blur(8px) saturate(1.2);
+  z-index:35;
+  transition:all .45s cubic-bezier(0.25,0.8,0.25,1);
+  box-shadow:0 0 18px rgba(100,150,255,0.18);
+  transform:scale(0.95);
+  opacity:0;
+}
+#questBox.active{
+  right:20px;
+  opacity:1;
+  transform:scale(1.05);
+  animation:boxPop .6s ease-out forwards;
+}
+#questBox::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:12px;
+  background:radial-gradient(circle at 80% 30%, rgba(255,255,255,0.15), transparent 70%);
+  opacity:0;
+  transition:opacity .4s ease;
+}
+#questBox.active::before{
+  opacity:1;
+}
+
+@keyframes boxPop{
+  0%{transform:translateX(40px) scale(0.9);opacity:0;}
+  60%{transform:translateX(-4px) scale(1.07);opacity:1;}
+  100%{transform:translateX(0) scale(1);}
+}
+
+#questBox h4{
+  margin:0 0 8px 0;
+  font-size:16px;
+  color:#ffe28a;
+  text-shadow:0 0 6px rgba(255,230,160,0.4);
+}
+#questBox ul{
+  list-style:none;
+  padding:0;
+  margin:0;
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* === 任務按鈕 === */
+#toggleQuest{
+  position:absolute;
+  right:20px;
+  bottom:20px;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.3);
+  color:#fff;
+  padding:8px 16px;
+  border-radius:8px;
+  cursor:pointer;
+  z-index:36;
+  transition:all 0.3s ease;
+}
+#toggleQuest:hover{
+  background:rgba(255,255,255,0.25);
+  transform:translateY(-2px) scale(1.03);
+  box-shadow:0 0 12px rgba(255,255,255,0.25);
+}
+</style>
+</head>
+
+<body>
+<!-- 背景 -->
+<div id="bgContainer">
+  <img src="img/isaac_home/isaac_home_bg.jpg" id="bg_home" class="scene-bg show">
+  <img src="img/isaac_home/isaac_home_study.jpg" id="bg_study" class="scene-bg">
+</div>
+
+<!-- 導覽列 -->
+<div class="topbar">
+  <button class="chip" data-jump="school.html">🏠 蘭薩爾小學</button>
+  <button class="chip" data-jump="wardrobe.html">🧥 衣櫃</button>
+  <button class="chip" data-jump="inventory.html">🎒 道具</button>
+  <div class="spacer"></div>
+  <button id="bgmBtn" class="chip">🔊 BGM 開</button>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="attr" id="hudC"><span>勇氣</span><b>0</b></div>
+  <div class="attr" id="hudE"><span>同理</span><b>0</b></div>
+  <div class="attr" id="hudT"><span>真實</span><b>0</b></div>
+</div>
+
+<!-- 對話 -->
+<div id="dialoguePortrait"><img id="portraitImg" src="avatars/isaac.png"></div>
+<div id="dialogueBox">
+  <div id="dialogueCharacter"></div>
+  <div id="dialogueText"></div>
+  <button id="nextBtn">下一句 ▶</button>
+</div>
+
+<!-- 任務 -->
+<div id="questBox"><h4>任務 Quest</h4><ul id="questList"></ul></div>
+<button id="toggleQuest">📜 任務</button>
+
+<script>
+// === 基本控制 ===
+const UICore = {
+  bgm:null,sfx:null,
+  init(){
+    console.log("🎮 UICore initialized");
+    this.sfx=new Audio("sfx/click.wav");
+
+    document.querySelectorAll("[data-jump]").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const link = btn.getAttribute("data-jump");
+    if(!link) return;
+    console.log("切換場景:", link);
+    document.body.classList.add("fade-out");
+    // ✅ 使用 open 保證在所有環境都可觸發
+    setTimeout(()=>{ window.open(link, "_self"); }, 500);
+  });
+});
+
+    const questBox=document.getElementById("questBox");
+    document.getElementById("toggleQuest").onclick=()=>questBox.classList.toggle("active");
+
+    const bgmBtn=document.getElementById("bgmBtn");
+    bgmBtn.onclick=()=>this.toggleBGM(bgmBtn);
+    this.autoPlayBGM("audio/bgm_home.mp3");
+  },
+  playClick(){if(this.sfx){this.sfx.currentTime=0;this.sfx.play().catch(()=>{});}},
+  toggleBGM(btn){
+    if(!this.bgm){this.autoPlayBGM("audio/bgm_home.mp3");btn.textContent="🔊 BGM 開";}
+    else{this.bgm.pause();this.bgm=null;btn.textContent="🔇 BGM 關";}
+  },
+  autoPlayBGM(src){
+    if(this.bgm)return;
+    this.bgm=new Audio(src);this.bgm.loop=true;this.bgm.volume=0.4;
+    const start=()=>{this.bgm.play().catch(()=>{});document.body.removeEventListener("click",start);}
+    document.body.addEventListener("click",start);
+  },
+  addQuest(title){
+    const q=document.createElement("li");q.textContent="🗒 "+title;
+    document.getElementById("questList").appendChild(q);
+  }
+};
+
+// === 對話系統 ===
+const Dialogue={
+  lines:[],index:0,speed:40,
+  play(lines,cb){
+    this.lines=lines;this.index=0;this.cb=cb;
+    this.box=document.getElementById("dialogueBox");
+    this.charEl=document.getElementById("dialogueCharacter");
+    this.textEl=document.getElementById("dialogueText");
+    this.portrait=document.getElementById("dialoguePortrait");
+    this.box.style.display="block";
+    this.next();
+    document.getElementById("nextBtn").onclick=()=>this.next();
+  },
+  next(){
+    if(this.index>=this.lines.length){this.box.style.display="none";if(this.cb)this.cb();return;}
+    const line=this.lines[this.index++];
+    this.charEl.textContent=line.n;
+    this.textEl.textContent="";
+    this.portrait.style.display="block";
+    if(line.n==="系統")this.portrait.style.display="none";
+    let i=0;
+    const typer=setInterval(()=>{
+      this.textEl.textContent=line.t.slice(0,i++);
+      if(i>line.t.length)clearInterval(typer);
+    },this.speed);
+  }
+};
+
+// === 啟動 ===
+window.addEventListener("load",()=>{
+  UICore.init();
+  setTimeout(()=>{
+    Dialogue.play([
+      {n:"艾薩克",t:"……這裡是家嗎？好久沒回來了。"},
+      {n:"艾薩克",t:"父親的書房，也許還留著秘密。"},
+      {n:"系統",t:"任務更新：探索艾薩克之家。"}
+    ],()=>UICore.addQuest("探索艾薩克之家"));
+  },600);
+});
+</script>
+</body>
+</html>

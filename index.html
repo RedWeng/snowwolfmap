@@ -1,0 +1,2580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>雪狼男孩 Snow Wolf Boy</title>
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: "Noto Sans TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  :root {
+    --panel-bg: rgba(10,12,20,0.6);
+    --panel-border: rgba(139,183,255,0.4);
+    --panel-glow: 0 0 30px rgba(120,180,255,0.4);
+    --text-dim: #9da5c7;
+    --text-soft: #cfd6ff;
+    --accent: #8bb7ff;
+    --accent-soft: rgba(139,183,255,0.18);
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    margin: 0;
+    color: #fff;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(60,60,80,0.25) 0%, rgba(10,10,20,0.95) 80%),
+      url("img/background/esports.jpg") center top / cover no-repeat fixed;
+    background-blend-mode: overlay;
+    position: relative;
+    overflow-x: hidden;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif;
+  }
+
+  /* 整頁電競HUD掃描線 + 色散能量 */
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.03) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0) 4px
+      ),
+      radial-gradient(circle at 20% 20%, rgba(120,200,255,0.08) 0%, transparent 60%),
+      radial-gradient(circle at 80% 70%, rgba(255,100,180,0.06) 0%, transparent 60%);
+    mix-blend-mode: screen;
+    z-index: 3;
+    opacity:.6;
+  }
+
+  /* 粒子雪 (畫布) */
+  #snowCanvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+/* 讓章節卡片變成可點擊 */
+.arc-link {
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow .2s, transform .2s;
+}
+.arc-link:hover {
+  box-shadow:0 0 24px rgba(150,200,255,.8),
+             0 30px 60px rgba(0,0,0,.9);
+  transform:translateY(-2px) scale(1.03);
+}
+
+/* 捲到目標後，幫 keyart 閃一圈電競光暈 */
+.highlightable.glow {
+  box-shadow:
+    0 0 30px rgba(139,183,255,.7),
+    0 0 80px rgba(139,183,255,.4),
+    0 40px 80px rgba(0,0,0,.9);
+  transition: box-shadow .3s ease;
+}
+
+/* ---- MAIN QUESTS 四季圖卡 ---- */
+
+.arc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px,100%),1fr));
+  gap:16px;
+  margin-top:16px;
+}
+
+.arc-season-card {
+  background: rgba(10,12,20,.6);
+  border:1px solid rgba(139,183,255,.35);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 20px 40px rgba(0,0,0,.8),
+    0 0 24px rgba(120,180,255,.3);
+  overflow:hidden;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  min-height:240px;
+  position:relative;
+  transition: box-shadow .2s, transform .2s;
+}
+.arc-season-card:hover {
+  box-shadow:
+    0 0 24px rgba(150,200,255,.8),
+    0 40px 80px rgba(0,0,0,.9);
+  transform:translateY(-2px) scale(1.03);
+}
+
+.arc-img-wrap {
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  background:#000;
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+.arc-img-wrap img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  filter:brightness(.9) saturate(1.05);
+  transition:filter .25s ease;
+}
+.arc-season-card:hover .arc-img-wrap img {
+  filter:brightness(1) saturate(1.15);
+}
+
+/* 疊上一層能量暈光，跟你其他卡一致 */
+.arc-img-overlay {
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(200,220,255,.18) 0%,transparent 60%),
+    linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.65) 100%);
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+
+.arc-text {
+  padding:12px 14px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.arc-title {
+  font-size:14px;
+  font-weight:600;
+  color:#fff;
+  line-height:1.4;
+  text-shadow:0 0 8px rgba(150,200,255,.8);
+}
+
+.arc-tagline {
+  font-size:12px;
+  line-height:1.5;
+  color:var(--text-dim);
+  text-shadow:0 0 8px rgba(0,0,0,.8);
+}
+
+/* 點擊捲到該季時，用到的目標高亮（沿用上次指示） */
+.highlightable.glow {
+  box-shadow:
+    0 0 30px rgba(139,183,255,.7),
+    0 0 80px rgba(139,183,255,.4),
+    0 40px 80px rgba(0,0,0,.9);
+  transition: box-shadow .3s ease;
+}
+
+
+  /**********************
+   * REUSABLE HUD CORNERS
+   **********************/
+  .hud-corner{
+    position:absolute;
+    left:8px;
+    top:8px;
+    width:28px;
+    height:28px;
+    border-top:2px solid rgba(139,183,255,.6);
+    border-left:2px solid rgba(139,183,255,.6);
+    border-radius:4px 0 0 0;
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    opacity:.6;
+    pointer-events:none;
+  }
+  .hud-corner-br{
+    position:absolute;
+    right:8px;
+    bottom:8px;
+    width:28px;
+    height:28px;
+    border-bottom:2px solid rgba(139,183,255,.4);
+    border-right:2px solid rgba(139,183,255,.4);
+    border-radius:0 0 4px 0;
+    box-shadow:0 0 12px rgba(139,183,255,.4);
+    opacity:.4;
+    pointer-events:none;
+  }
+
+  /**********************
+   * HERO
+   **********************/
+  .hero {
+    position: relative;
+    min-height: 60vh;
+    max-height: 70vh;
+    background:
+      radial-gradient(circle at 50% 20%, rgba(0,0,20,0.0) 0%, rgba(0,0,0,0.6) 60%),
+      url("img/hero_bg/hero_bg.jpg") center/cover no-repeat;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    display: flex;
+    align-items: flex-end;
+    padding: 40px 24px;
+    box-shadow: 0 80px 120px rgba(0,0,0,.8);
+    overflow: hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(140,180,255,0.08) 0%, transparent 70%),
+      radial-gradient(circle at 80% 60%, rgba(255,120,200,0.07) 0%, transparent 70%);
+    filter: blur(40px);
+    opacity:.8;
+    pointer-events:none;
+    mix-blend-mode: screen;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: radial-gradient(circle at 50% 20%, rgba(0,0,20,0) 0%, rgba(0,0,0,.6) 70%);
+    mix-blend-mode: screen;
+  }
+  .hero-content {
+    position: relative;
+    max-width: 800px;
+    z-index: 4;
+  }
+  .brand-title {
+    font-size: clamp(24px,2vw,28px);
+    font-weight: 600;
+    color:#fff;
+    text-shadow:
+      0 0 16px rgba(160,200,255,.8),
+      0 0 32px rgba(160,200,255,.4),
+      0 0 64px rgba(100,150,255,.2);
+    letter-spacing:.05em;
+  }
+  .brand-sub {
+    font-size:14px;
+    color:var(--text-dim);
+    line-height:1.5;
+    margin-top:8px;
+    text-shadow:0 0 8px rgba(0,0,0,.8),0 0 12px rgba(150,200,255,.4);
+  }
+  .enter-btn {
+    margin-top:20px;
+    background: rgba(0,0,0,.4);
+    border:1px solid var(--panel-border);
+    color:#fff;
+    font-size:13px;
+    padding:10px 16px;
+    border-radius:var(--radius-md);
+    cursor:pointer;
+    box-shadow:0 0 16px rgba(120,180,255,.6),0 0 48px rgba(120,180,255,.3);
+    backdrop-filter:blur(6px);
+    transition:.2s;
+  }
+  .enter-btn:hover {
+    background:var(--accent-soft);
+    box-shadow:0 0 24px rgba(150,200,255,.9),0 0 64px rgba(150,200,255,.4);
+    transform:translateY(-1px) scale(1.03);
+  }
+
+  /**********************
+   * GENERIC FRAME
+   **********************/
+  section.frame {
+    position: relative;
+    margin:32px auto;
+    width: min(1400px, 92%);
+    background: var(--panel-bg);
+    border:1px solid var(--panel-border);
+    border-radius:var(--radius-lg);
+    box-shadow: var(--panel-glow), 0 40px 80px rgba(0,0,0,.8);
+    padding:24px;
+    backdrop-filter: blur(8px);
+    z-index: 4;
+    overflow:hidden;
+  }
+  section.frame .hud-corner{
+    position:absolute;
+    left:12px;
+    top:12px;
+  }
+  section.frame .hud-corner-br{
+    position:absolute;
+    right:12px;
+    bottom:12px;
+  }
+
+  .frame-header {
+    margin-bottom:16px;
+    position: relative;
+    z-index:2;
+  }
+  .frame-header::before {
+    content:"";
+    position:absolute;
+    left:-8px;
+    top:-8px;
+    width:40px;
+    height:40px;
+    border-top:2px solid rgba(139,183,255,.6);
+    border-left:2px solid rgba(139,183,255,.6);
+    border-radius:4px 0 0 0;
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    opacity:.6;
+  }
+  .frame-eyebrow {
+    font-size:12px;
+    letter-spacing:.15em;
+    color:var(--accent);
+    text-transform:uppercase;
+    font-weight:600;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .frame-headline {
+    font-size:18px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 10px rgba(150,200,255,.4),0 0 30px rgba(150,200,255,.2);
+    margin-top:4px;
+  }
+  .frame-desc {
+    font-size:13px;
+    line-height:1.5;
+    color:var(--text-dim);
+    margin-top:8px;
+    max-width:900px;
+    white-space:pre-line;
+  }
+
+  /**********************
+   * WORLD MAP + PANEL
+   **********************/
+  .world-flex {
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    position:relative;
+    z-index:2;
+  }
+
+  .map-area {
+    flex:2;
+    min-width:300px;
+    min-height:520px;
+    position:relative;
+    border-radius:var(--radius-md);
+    border:1px solid rgba(255,255,255,.15);
+    background-image:url("img/mugaur_map/mugaur_map.jpg");
+    background-size:cover;
+    background-position:center;
+    overflow:hidden;
+    animation: glow 15s ease-in-out infinite alternate;
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 32px rgba(120,180,255,.3);
+  }
+  @keyframes glow {
+    from { filter:brightness(.95) saturate(1); }
+    to   { filter:brightness(1.05) saturate(1.1); }
+  }
+  .map-area::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), transparent 70%),
+      radial-gradient(circle at 70% 70%, rgba(173,216,230,0.06), transparent 80%);
+    mix-blend-mode:screen;
+    animation:mistMove 18s infinite alternate ease-in-out;
+    opacity:.7;
+    z-index:2;
+  }
+  @keyframes mistMove{
+    0%  {background-position:0% 0%,100% 100%;transform:scale(1);opacity:.6;}
+    50% {background-position:40% 60%,60% 40%;transform:scale(1.05);opacity:.8;}
+    100%{background-position:100% 100%,0% 0%;transform:scale(1.1);opacity:.6;}
+  }
+
+  .location-btn{
+    position:absolute;
+    padding:6px 10px;
+    background:rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:8px;
+    font-size:12px;
+    line-height:1.4;
+    color:#fff;
+    cursor:pointer;
+    transition:all .2s ease;
+    backdrop-filter:blur(4px);
+    box-shadow:0 10px 20px rgba(0,0,0,.8),0 0 16px rgba(150,200,255,.6);
+    z-index:3;
+    white-space:nowrap;
+  }
+  .location-btn:hover{
+    background:rgba(180,220,255,0.25);
+    box-shadow:0 0 12px rgba(150,200,255,.9),0 0 32px rgba(150,200,255,.4);
+    transform:scale(1.05);
+  }
+  .location-btn:active{
+    transform:scale(.92);
+    box-shadow:0 0 15px rgba(120,180,255,.9);
+  }
+
+  .info-panel{
+    flex:1;
+    min-width:260px;
+    max-width:360px;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.4);
+    border-radius:var(--radius-md);
+    box-shadow:0 0 30px rgba(120,180,255,.4),0 30px 60px rgba(0,0,0,.9),0 0 60px rgba(120,180,255,.2) inset;
+    padding:16px 20px;
+    backdrop-filter:blur(10px);
+    display:flex;
+    flex-direction:column;
+    color:#fff;
+    position:relative;
+  }
+
+  .info-panel::before{
+    content:"";
+    position:absolute;
+    right:8px;
+    top:8px;
+    width:32px;
+    height:32px;
+    border-top:2px solid rgba(139,183,255,.6);
+    border-right:2px solid rgba(139,183,255,.6);
+    border-radius:0 4px 0 0;
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+    opacity:.5;
+  }
+
+  .panel-type{
+    font-size:11px;
+    color:var(--accent);
+    letter-spacing:.15em;
+    font-weight:600;
+    text-transform:uppercase;
+    margin-bottom:4px;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+  .panel-name{
+    font-size:18px;
+    font-weight:600;
+    line-height:1.4;
+    margin-bottom:10px;
+    color:#fff;
+    text-shadow:0 0 8px rgba(150,200,255,.5),0 0 24px rgba(150,200,255,.3);
+  }
+
+  .panel-img-wrap{
+    position:relative;
+    width:100%;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.15);
+    margin-bottom:10px;
+    display:none;
+    background:#000;
+    min-height:140px;
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 24px rgba(150,200,255,.4);
+  }
+  .panel-img-wrap img{
+    display:block;
+    width:100%;
+    height:auto;
+    object-fit:cover;
+  }
+  .panel-img-wrap::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom,rgba(0,0,0,.1),rgba(0,0,0,.45));
+  }
+
+  .panel-desc{
+    font-size:13px;
+    color:var(--text-soft);
+    line-height:1.5;
+    white-space:pre-line;
+    margin-bottom:12px;
+  }
+
+  .panel-subtitle{
+    margin-top:14px;
+    font-size:12px;
+    color:var(--accent);
+    letter-spacing:.15em;
+    font-weight:600;
+    text-transform:uppercase;
+    text-shadow:0 0 8px rgba(139,183,255,.8);
+  }
+
+  .panel-list{
+    margin:8px 0 0;
+    padding-left:18px;
+    font-size:12px;
+    color:#ddd;
+    line-height:1.5;
+  }
+
+  @media(max-width:900px){
+    .world-flex{flex-direction:column;}
+    .map-area,.info-panel{
+      width:100%;
+      min-height:400px;
+    }
+  }
+
+  /**********************
+   * MAIN QUESTS / ARC
+   **********************/
+  .arc-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:16px;
+    position:relative;
+    z-index:2;
+  }
+  .arc-card{
+    position:relative;
+    background:rgba(0,0,0,.4);
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:var(--radius-md);
+    padding:10px 14px;
+    min-width:200px;
+    color:#fff;
+    font-size:13px;
+    line-height:1.5;
+    box-shadow:
+      0 15px 30px rgba(0,0,0,.8),
+      0 0 16px rgba(150,200,255,.4),
+      0 0 32px rgba(150,200,255,.2);
+    text-shadow:0 0 8px rgba(150,200,255,.5),0 0 24px rgba(150,200,255,.3);
+  }
+  .arc-card strong{
+    color:var(--accent);
+    font-weight:600;
+  }
+
+  /**********************
+   * CHARACTERS
+   **********************/
+  .char-block-label {
+    font-size:14px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(150,200,255,.5),0 0 24px rgba(150,200,255,.3);
+    margin:24px 0 8px;
+  }
+
+  .char-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .char-card{
+    position:relative;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.35);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:260px;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .char-card:hover{
+    box-shadow:
+      0 0 24px rgba(150,200,255,.9),
+      0 30px 60px rgba(0,0,0,.9),
+      0 0 64px rgba(150,200,255,.5);
+    transform:translateY(-2px) scale(1.02);
+  }
+
+  .char-img{
+    position:relative;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+  }
+  .char-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .char-img::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(180,200,255,.2) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 100%);
+    mix-blend-mode:screen;
+  }
+  .char-info{
+    padding:12px 14px 16px;
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+    position:relative;
+  }
+  .char-name{
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:4px;
+    text-shadow:
+      0 0 8px rgba(150,200,255,.8),
+      0 0 24px rgba(150,200,255,.4);
+  }
+  .char-role{
+    font-size:12px;
+    color:var(--accent);
+    margin-bottom:8px;
+    letter-spacing:.05em;
+    white-space:pre-line;
+    text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);
+  }
+  .char-desc{
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+
+  /**********************
+   * ARTIFACTS → 一樣用 char-card
+   **********************/
+
+  /**********************
+   * MUSIC
+   **********************/
+  .music-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .music-card {
+    position:relative;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.35);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .music-card .hud-corner{left:12px;top:12px;}
+  .music-card .hud-corner-br{right:12px;bottom:12px;}
+  .music-title {
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    text-shadow:0 0 8px rgba(150,200,255,.6),0 0 24px rgba(150,200,255,.3);
+  }
+  .music-meta {
+    font-size:12px;
+    color:var(--accent);
+    letter-spacing:.05em;
+    text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);
+  }
+  .music-video {
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,.15);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    color:#666;
+    text-shadow:none;
+    box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 24px rgba(150,200,255,.4);
+  }
+  .music-video iframe {
+    width:100%;
+    height:100%;
+    border:0;
+  }
+
+  /**********************
+   * EPISODES
+   **********************/
+  .season-block{
+    margin-top:24px;
+  }
+  .season-title{
+    font-size:16px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:0 0 8px rgba(150,200,255,.5),0 0 24px rgba(150,200,255,.3);
+    margin-bottom:12px;
+  }
+
+  .season-keyart{
+    position:relative;
+    width:100%;
+    border-radius:var(--radius-md);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.15);
+    background:#000;
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    max-height:260px;
+    margin-bottom:16px;
+  }
+  .season-keyart img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .season-keyart::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(200,220,255,.15) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.55) 100%);
+    mix-blend-mode:screen;
+  }
+
+  .episodes-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));
+    gap:16px;
+  }
+
+  .episode-card{
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:var(--radius-md);
+    overflow:hidden;
+    box-shadow:
+      0 20px 40px rgba(0,0,0,0.8),
+      0 0 24px rgba(120,180,255,.4),
+      0 0 48px rgba(120,180,255,.2);
+    display:flex;
+    flex-direction:column;
+    min-height:220px;
+    cursor:pointer;
+    transition:.2s;
+  }
+  .episode-card:hover{
+    box-shadow:
+      0 0 24px rgba(150,200,255,.9),
+      0 30px 60px rgba(0,0,0,.9),
+      0 0 64px rgba(150,200,255,.5);
+    transform:translateY(-2px) scale(1.03);
+  }
+  .episode-img-wrap{
+    position:relative;
+    aspect-ratio:16/9;
+    width:100%;
+    background:#000;
+    overflow:hidden;
+  }
+  .episode-img-wrap img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .episode-img-wrap::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(200,220,255,.2) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,0.6) 100%);
+    mix-blend-mode:screen;
+  }
+  .episode-info{
+    padding:12px 14px 16px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .episode-title{
+    font-size:14px;
+    font-weight:600;
+    color:#fff;
+    line-height:1.4;
+    text-shadow:0 0 8px rgba(150,200,255,.8),0 0 24px rgba(150,200,255,.4);
+  }
+  .episode-desc{
+    font-size:12px;
+    line-height:1.5;
+    color:#ccc;
+  }
+
+  /**********************
+   * TIMELINE (主線關鍵事件)
+   **********************/
+  .timeline-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .timeline-card{
+    position:relative;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.35);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    overflow:hidden;
+    min-height:240px;
+  }
+  .timeline-img{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+  }
+  .timeline-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .timeline-img::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(180,200,255,.2) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 100%);
+    mix-blend-mode:screen;
+  }
+  .timeline-info{
+    padding:12px 14px 16px;
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+  .timeline-title{
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    text-shadow:0 0 8px rgba(150,200,255,.8),0 0 24px rgba(150,200,255,.4);
+    margin-bottom:4px;
+  }
+  .timeline-when{
+    font-size:11px;
+    color:var(--accent);
+    text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);
+    letter-spacing:.1em;
+    margin-bottom:8px;
+  }
+
+  /**********************
+   * FACTIONS (勢力/陣營)
+   **********************/
+  .faction-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .faction-card{
+    position:relative;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.4);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.4),
+      0 0 48px rgba(120,180,255,.2);
+    overflow:hidden;
+    min-height:280px;
+  }
+  .faction-img{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+  }
+  .faction-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .faction-img::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(200,220,255,.15) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.65) 100%);
+    mix-blend-mode:screen;
+  }
+  .faction-info{
+    padding:12px 14px 16px;
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+  .faction-name{
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:4px;
+    text-shadow:
+      0 0 8px rgba(150,200,255,.8),
+      0 0 24px rgba(150,200,255,.4);
+  }
+  .faction-desc{
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+
+  /**********************
+   * WOLF CLANS
+   **********************/
+  .wolf-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+    gap:16px;
+    margin-top:16px;
+  }
+  .wolf-card{
+    position:relative;
+    background:rgba(10,12,20,.6);
+    border:1px solid rgba(139,183,255,.35);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    overflow:hidden;
+  }
+  .wolf-img{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+  }
+  .wolf-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .wolf-img::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(180,200,255,.2) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.6) 100%);
+    mix-blend-mode:screen;
+  }
+  .wolf-info{
+    padding:12px 14px 16px;
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+  .wolf-name{
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    text-shadow:
+      0 0 8px rgba(150,200,255,.8),
+      0 0 24px rgba(150,200,255,.4);
+    margin-bottom:4px;
+  }
+  .wolf-desc{
+    font-size:13px;
+    color:#ccc;
+    line-height:1.5;
+  }
+
+  /**********************
+   * CREDITS / CONTACT
+   **********************/
+  .credits-wrap{
+    position:relative;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));
+    gap:24px;
+    margin-top:16px;
+    font-size:13px;
+    line-height:1.6;
+    color:#cfd6ff;
+  }
+  .credit-block{
+    background:rgba(0,0,0,.4);
+    border:1px solid rgba(139,183,255,.35);
+    border-radius:var(--radius-md);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,.8),
+      0 0 24px rgba(120,180,255,.3),
+      0 0 48px rgba(120,180,255,.15);
+    padding:16px;
+    position:relative;
+  }
+  .credit-title{
+    font-size:14px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:
+      0 0 8px rgba(150,200,255,.8),
+      0 0 24px rgba(150,200,255,.4);
+    margin-bottom:8px;
+  }
+  .credit-line{
+    color:#9da5c7;
+    font-size:13px;
+    line-height:1.5;
+  }
+
+  /**********************
+   * MODAL
+   **********************/
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,20,.8);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    padding:16px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-wrap{
+    background:rgba(10,12,20,.8);
+    border:1px solid rgba(139,183,255,.5);
+    border-radius:var(--radius-lg);
+    box-shadow:0 0 30px rgba(120,180,255,.7),0 40px 80px rgba(0,0,0,.9);
+    max-width: min(400px,90%);
+    width:100%;
+    color:#fff;
+    position:relative;
+    backdrop-filter: blur(10px);
+    padding-bottom:16px;
+    overflow:hidden;
+  }
+  .modal-wrap::before{
+    content:"";
+    position:absolute;
+    left:12px;
+    top:12px;
+    width:32px;
+    height:32px;
+    border-top:2px solid rgba(139,183,255,.8);
+    border-left:2px solid rgba(139,183,255,.8);
+    border-radius:4px 0 0 0;
+    box-shadow:0 0 12px rgba(139,183,255,.8);
+  }
+  .modal-close{
+    position:absolute;
+    right:12px;
+    top:12px;
+    background:rgba(0,0,0,.4);
+    border:1px solid rgba(139,183,255,.6);
+    color:#fff;
+    font-size:12px;
+    padding:4px 8px;
+    border-radius:var(--radius-sm);
+    cursor:pointer;
+    box-shadow:0 0 12px rgba(120,180,255,.6),0 0 32px rgba(120,180,255,.3);
+  }
+  .modal-img{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    border-bottom:1px solid rgba(255,255,255,.12);
+  }
+  .modal-img img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .modal-img::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 20%,rgba(200,220,255,.2) 0%,transparent 60%),
+      linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,.7) 100%);
+    mix-blend-mode:screen;
+  }
+  .modal-body{
+    padding:16px;
+    font-size:13px;
+    line-height:1.5;
+    color:#ccc;
+  }
+  .modal-name{
+    font-size:16px;
+    font-weight:600;
+    color:#fff;
+    text-shadow:
+      0 0 8px rgba(150,200,255,.8),
+      0 0 24px rgba(150,200,255,.4);
+    margin-bottom:4px;
+  }
+  .modal-role{
+    font-size:12px;
+    color:var(--accent);
+    letter-spacing:.05em;
+    line-height:1.5;
+    white-space:pre-line;
+    text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);
+    margin-bottom:8px;
+  }
+  .modal-desc{
+    font-size:13px;
+    line-height:1.6;
+    color:#ccc;
+    white-space:pre-line;
+    margin-bottom:12px;
+  }
+  .modal-quote{
+    font-size:12px;
+    line-height:1.5;
+    color:#8bb7ff;
+    text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);
+    white-space:pre-line;
+  }
+
+</style>
+</head>
+<body>
+
+<canvas id="snowCanvas"></canvas>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="brand-title">雪狼男孩 Snow Wolf Boy</div>
+    <div class="brand-sub">
+      眼淚不是珍珠,眼淚就是眼淚。
+    </div>
+    <button class="enter-btn" onclick="document.getElementById('world').scrollIntoView({behavior:'smooth'})">
+      進入世界 / ENTER WORLD
+    </button>
+  </div>
+</section>
+
+<!-- WORLD MAP -->
+<section class="frame" id="world">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">WORLD MAP</div>
+    <div class="frame-headline">穆高爾森林 · MUGAUR FOREST</div>
+    <div class="frame-desc">
+      在這片森林裡，每一個地點都不是背景。  
+      它們是記憶、是戰場、是秘密的藏身處。  
+      點地圖標記，右側會顯示詳細資訊。
+    </div>
+  </div>
+
+  <div class="world-flex">
+    <div class="map-area" id="map-area">
+      <div class="location-btn" style="left:25%; top:15%;" data-location="snow_valley">雪鴞谷</div>
+      <div class="location-btn" style="left:38%; top:30%;" data-location="lake_reverse">逆轉之湖</div>
+      <div class="location-btn" style="left:50%; top:25%;" data-location="lost_stone">失去的石墩</div>
+      <div class="location-btn" style="left:20%; top:55%;" data-location="eldava_city">埃爾達瓦城</div>
+      <div class="location-btn" style="left:32%; top:70%;" data-location="ransar_school">蘭薩爾小學</div>
+      <div class="location-btn" style="left:60%; top:20%;" data-location="mist_town">迷霧鎮</div>
+      <div class="location-btn" style="left:70%; top:35%;" data-location="trinise_house">翠妮絲樹屋</div>
+      <div class="location-btn" style="left:75%; top:55%;" data-location="shadow_fortress">暗黑古堡</div>
+      <div class="location-btn" style="left:82%; top:70%;" data-location="dr_shin_home">希恩博士住所</div>
+      <div class="location-btn" style="left:60%; top:80%;" data-location="sereth_valley">瑟雷斯幽谷</div>
+      <div class="location-btn" style="left:45%; top:85%;" data-location="zed_hideout">賽德藏身處</div>
+      <div class="location-btn" style="left:55%; top:50%;" data-location="moon_ring">月圓之夜擂台</div>
+    </div>
+
+    <aside class="info-panel">
+      <div class="panel-type" id="panelType">LOCATION</div>
+      <div class="panel-name" id="panelName">請選擇一個地點</div>
+
+      <div class="panel-img-wrap" id="panelImgWrap">
+        <img id="panelImg" src="" alt="place image">
+      </div>
+
+      <div class="panel-desc" id="panelDesc">
+        這裡會顯示地點的介紹、發生過什麼事、誰在這裡留下了痕跡。
+      </div>
+
+      <div class="panel-subtitle">關鍵事件</div>
+      <ul class="panel-list" id="panelEvents"><li>—</li></ul>
+
+      <div class="panel-subtitle">相關角色</div>
+      <ul class="panel-list" id="panelChars"><li>—</li></ul>
+    </aside>
+  </div>
+</section>
+
+<!-- MAIN QUESTS -->
+<section class="frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">MAIN QUESTS</div>
+    <div class="frame-headline">主線任務 / 四季章節</div>
+    <div class="frame-desc">
+      每一季就像一個大型任務。角色會長大、變勇敢，也會失去東西。  
+      它不是單集冒險，而是一場慢慢揭露真相的旅程。
+    </div>
+  </div>
+
+  <div class="arc-row">
+
+    <div class="arc-grid">
+
+<!-- 第一季 -->
+<a class="arc-season-card"
+   href="season1_game.html"
+   style="text-decoration:none; color:inherit;">
+  <div class="arc-img-wrap">
+    <img src="img/seasons/season1_key.jpg" alt="最遙遠的地方">
+    <div class="arc-img-overlay"></div>
+  </div>
+  <div class="arc-text">
+    <strong>第一季：</strong> 最遙遠的地方
+  </div>
+</a>
+
+  <!-- 第二季 -->
+  <div class="arc-season-card arc-link"
+       data-target="#season2Block"
+       tabindex="0">
+    <div class="arc-img-wrap">
+      <img src="img/seasons/season2_key.jpg" alt="埃爾達瓦城之戰">
+      <div class="arc-img-overlay"></div>
+    </div>
+    <div class="arc-text">
+      <div class="arc-title">第二季：埃爾達瓦城之戰</div>
+      <div class="arc-tagline">不是傳說，是第一場真正流血的夜晚。</div>
+    </div>
+  </div>
+
+  <!-- 第三季 -->
+  <div class="arc-season-card arc-link"
+       data-target="#season3Block"
+       tabindex="0">
+    <div class="arc-img-wrap">
+      <img src="img/seasons/season3_key.jpg" alt="穆高爾森林之謎">
+      <div class="arc-img-overlay"></div>
+    </div>
+    <div class="arc-text">
+      <div class="arc-title">第三季：穆高爾森林之謎</div>
+      <div class="arc-tagline">森林記得一切，甚至你想忘掉的。</div>
+    </div>
+  </div>
+
+  <!-- 第四季 -->
+  <div class="arc-season-card arc-link"
+       data-target="#season4Block"
+       tabindex="0">
+    <div class="arc-img-wrap">
+      <img src="img/seasons/season4_key.jpg" alt="古堡的詛咒">
+      <div class="arc-img-overlay"></div>
+    </div>
+    <div class="arc-text">
+      <div class="arc-title">第四季：古堡的詛咒</div>
+      <div class="arc-tagline">古堡不是廢墟，它在等誰回來負責。</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- CHARACTERS -->
+<section class="frame" id="characters-frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">CHARACTERS</div>
+    <div class="frame-headline">角色群像</div>
+    <div class="frame-desc">
+      這些不是路人。每一個人都把故事往前推了一步。  
+      點角色卡可以查看詳細資料。
+    </div>
+  </div>
+
+  <div class="char-block-label">第一季重要角色</div>
+  <div class="char-grid" id="charGridSeason1"></div>
+
+  <div class="char-block-label">第二季新增重要角色</div>
+  <div class="char-grid" id="charGridSeason2"></div>
+
+  <div class="char-block-label">第三季新角色</div>
+  <div class="char-grid" id="charGridSeason3"></div>
+
+  <div class="char-block-label">第四季新角色（預告 / 暫定）</div>
+  <div class="char-grid" id="charGridSeason4"></div>
+</section>
+
+<!-- ARTIFACTS -->
+<section class="frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">ARTIFACTS</div>
+    <div class="frame-headline">關鍵道具 / 魔法物件</div>
+    <div class="frame-desc">
+      這些不是普通的道具。它們是線索、是保護、是承諾、是秘密的證明。
+    </div>
+  </div>
+
+  <div class="char-grid" id="artifactGrid"></div>
+</section>
+
+<!-- MUSIC -->
+<section class="frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">MUSIC</div>
+    <div class="frame-headline">主題曲 / 角色曲 / 片尾曲</div>
+    <div class="frame-desc">
+      這些歌是角色心裡沒講出口的話。
+    </div>
+  </div>
+
+  <div class="music-grid" id="musicGrid"></div>
+</section>
+
+<!-- EPISODES (1~4季) -->
+<section class="frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">EPISODES</div>
+    <div class="frame-headline">分集故事</div>
+    <div class="frame-desc">
+      每一集不是單獨的冒險，而是下一個選擇。
+    </div>
+  </div>
+
+  <!-- 第一季 -->
+<div class="season-block" id="season1Block">
+  <div class="season-title">第一季｜最遙遠的地方</div>
+  <div class="season-keyart highlightable">
+    <img src="img/seasons/season1_key.jpg" alt="Season 1 Key Art">
+  </div>
+  <div class="episodes-grid" id="season1Row"></div>
+</div>
+
+<!-- 第二季 -->
+<div class="season-block" id="season2Block">
+  <div class="season-title">第二季｜埃爾達瓦城之戰</div>
+  <div class="season-keyart highlightable">
+    <img src="img/seasons/season2_key.jpg" alt="Season 2 Key Art">
+  </div>
+  <div class="episodes-grid" id="season2Row"></div>
+</div>
+
+<!-- 第三季 -->
+<div class="season-block" id="season3Block">
+  <div class="season-title">第三季｜穆高爾森林之謎</div>
+  <div class="season-keyart highlightable">
+    <img src="img/seasons/season3_key.jpg" alt="Season 3 Key Art">
+  </div>
+  <div class="episodes-grid" id="season3Row"></div>
+</div>
+
+<!-- 第四季 -->
+<div class="season-block" id="season4Block">
+  <div class="season-title">第四季｜古堡的詛咒</div>
+  <div class="season-keyart highlightable">
+    <img src="img/seasons/season4_key.jpg" alt="Season 4 Key Art">
+  </div>
+  <div class="episodes-grid" id="season4Row"></div>
+</div>
+
+
+<!-- TIMELINE -->
+<section class="frame" id="timeline-frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">TIMELINE</div>
+    <div class="frame-headline">主線關鍵事件</div>
+    <div class="frame-desc">
+      世界是在「哪一刻」徹底改變的？  
+      這些不是背景設定，是傷疤。
+    </div>
+  </div>
+
+  <div class="timeline-grid" id="timelineGrid"></div>
+</section>
+
+<!-- FACTIONS -->
+<section class="frame" id="faction-frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">FACTIONS</div>
+    <div class="frame-headline">勢力 / 陣營</div>
+    <div class="frame-desc">
+      沒有人是完全的善，也沒有人是純粹的壞。  
+      每一個陣營都有他們「為什麼要活下去」的理由。
+    </div>
+  </div>
+
+  <div class="faction-grid" id="factionGrid"></div>
+</section>
+
+<!-- WOLF CLANS -->
+<section class="frame" id="wolf-frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">WOLF CLANS</div>
+    <div class="frame-headline">狼族血脈</div>
+    <div class="frame-desc">
+      狼族不只是一個傳說。  
+      他們有記憶、有階層、有責任。
+    </div>
+  </div>
+
+  <div class="wolf-grid" id="wolfGrid"></div>
+</section>
+
+<!-- CREDITS -->
+<section class="frame" id="credits-frame">
+  <div class="hud-corner"></div><div class="hud-corner-br"></div>
+
+  <div class="frame-header">
+    <div class="frame-eyebrow">CREDITS</div>
+    <div class="frame-headline">製作 / 聯絡</div>
+    <div class="frame-desc">
+      如果你想合作、投資、發行、動畫化、遊戲化，這裡是我們的基本資訊。
+    </div>
+  </div>
+
+  <div class="credits-wrap" id="creditsWrap">
+    <div class="credit-block">
+      <div class="credit-title">創作 / 世界觀</div>
+      <div class="credit-line">原作 :超夢莉媽媽</div>
+      <div class="credit-line">故事線控管：雪狼戰隊</div>
+      <div class="credit-line">世界觀顧問：穆高爾研究會</div>
+    </div>
+
+    <div class="credit-block">
+      <div class="credit-title">視覺 / 設計</div>
+      <div class="credit-line">角色視覺：魔法設計室</div>
+      <div class="credit-line">概念美術：雪之工作站</div>
+      <div class="credit-line">Logo / UI / HUD：Esports Lab</div>
+    </div>
+
+    <div class="credit-block">
+      <div class="credit-title">聯絡 / 合作</div>
+      <div class="credit-line">商業合作 / 授權 / 出版 / 動畫改編</div>
+      <div class="credit-line">Email：molodyschool@gmail.com</div>
+      <div class="credit-line">（請附上公司/用途/時程）</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="charModal">
+  <div class="modal-wrap">
+    <button class="modal-close" id="modalClose">CLOSE ✕</button>
+    <div class="modal-img">
+      <img id="modalImg" src="" alt="">
+    </div>
+    <div class="modal-body">
+      <div class="modal-name" id="modalName"></div>
+      <div class="modal-role" id="modalRole"></div>
+      <div class="modal-desc" id="modalDesc"></div>
+      <div class="modal-quote" id="modalQuote"></div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+/* =========================
+   1. 世界地點
+   ========================= */
+const locations = {
+  snow_valley: {
+    name: "雪鴞谷 Snow Valley",
+    desc: "積雪覆頂的山谷。傳說雪狼曾在此出生。\n對里特來說，這裡像是他第一次『聽見森林』的地方。",
+    events: [
+      "艾薩克在這裡面對自己受傷的真相。",
+      "里特第一次感覺到狼群不是敵人。"
+    ],
+    chars: ["里特", "艾薩克"],
+    image: "img/locations/snow_valley.jpg",
+    typeLabel: "境界邊緣"
+  },
+  lake_reverse: {
+    name: "逆轉之湖 Lake of Reversal",
+    desc: "湖面像記憶一樣，越清楚越危險。\n可以映出『真實』，但真實不一定能承受。",
+    events: [
+      "里特看見自己以為忘掉的記憶。",
+      "艾薩克看到失去雙腿之前的過去。"
+    ],
+    chars: ["里特", "艾薩克"],
+    image: "img/locations/lake_reverse.jpg",
+    typeLabel: "記憶邊界"
+  },
+  lost_stone: {
+    name: "失去的石墩 Lost Stone",
+    desc: "一塊被時間吞掉名字的石頭。有人說它是墓碑，有人說它是路標。\n第二季開始，石墩變成一種『證詞』。",
+    events: [
+      "長老不願談的那段歷史留下的痕跡。",
+      "孩子們第一次懷疑：大人講的版本是不是假的？"
+    ],
+    chars: ["長老", "迪恩", "海瑟"],
+    image: "img/locations/lost_stone.jpg",
+    typeLabel: "禁語遺跡"
+  },
+  eldava_city: {
+    name: "埃爾達瓦城 Eldava",
+    desc: "人類據點，也是衝突正面爆發之地。\n第二季之後，這裡的名字等同於『代價』和『火』。",
+    events: [
+      "埃爾達瓦城之戰。",
+      "大火之夜，沒有人再能假裝不知道。"
+    ],
+    chars: ["里特", "海瑟", "迪恩"],
+    image: "img/locations/eldava_city.jpg",
+    typeLabel: "戰場"
+  },
+  ransar_school: {
+    name: "蘭薩爾小學 Ransar School",
+    desc: "表面是普通小學，實際上是孩子們最後能假裝『還是普通小孩』的地方。",
+    events: [
+      "米斯老師守住過這裡。",
+      "《拖把上的驅散咒語》就發生在這裡。"
+    ],
+    chars: ["里特", "海瑟", "迪恩", "米斯老師"],
+    image: "img/locations/ransar_school.jpg",
+    typeLabel: "庇護所"
+  },
+  mist_town: {
+    name: "迷霧鎮 Mist Town",
+    desc: "托歐比先生與瑪琳絲太太的地盤。\n果子有魔法、食物能療傷，這裡像是一種暫時的家。",
+    events: [
+      "菲亞在這裡登場。",
+      "迪恩第一次拿到『希望之果』。"
+    ],
+    chars: ["托歐比", "瑪琳絲", "菲亞", "迪恩"],
+    image: "img/locations/mist_town.jpg",
+    typeLabel: "避風港"
+  },
+  trinise_house: {
+    name: "翠妮絲樹屋 Trinise's Treehouse",
+    desc: "翠妮絲住在會呼吸的樹屋裡。\n風會替她傳信，樹枝會替她護住她想保護的人。",
+    events: [
+      "翠妮絲與艾琳互嗆又互相照顧。",
+      "森林的風第一次公開站在孩子們這邊。"
+    ],
+    chars: ["翠妮絲", "艾琳"],
+    image: "img/locations/trinise_house.jpg",
+    typeLabel: "風之居所"
+  },
+  shadow_fortress: {
+    name: "暗黑古堡 Shadow Fortress",
+    desc: "月影的領地。\n不是廢墟，是還在呼吸的記憶體。",
+    events: [
+      "月影以法杖擊退石像怪。",
+      "孩子們得到定向之晶。"
+    ],
+    chars: ["月影", "海瑟", "里特"],
+    image: "img/locations/shadow_fortress.jpg",
+    typeLabel: "禁城"
+  },
+  dr_shin_home: {
+    name: "希恩博士住所 Dr. Shin’s Cabin",
+    desc: "森林邊緣的木屋，裡面全是奇怪的裝置、草圖、實驗品。\n他不一定懂魔法，但他懂工具。",
+    events: [
+      "時光沙漏出現在這裡。",
+      "黑夜圖畫筆 / 自動捕夢機登場。"
+    ],
+    chars: ["希恩博士", "里特", "菲亞", "艾希爾"],
+    image: "img/locations/dr_shin_home.jpg",
+    typeLabel: "研究小屋"
+  },
+  sereth_valley: {
+    name: "瑟雷斯幽谷 Sereth Valley",
+    desc: "賽西莉雅與賽西維雅的棲地。\n滿是水元素的氣息，是治癒、也是防禦。",
+    events: [
+      "水盾第一次全面展開。",
+      "治癒水拯救受傷的狼族。"
+    ],
+    chars: ["賽西莉雅", "賽西維雅", "穆林坦娜"],
+    image: "img/locations/sereth_valley.jpg",
+    typeLabel: "元素領地"
+  },
+  zed_hideout: {
+    name: "賽德藏身處 Zed’s Hideout",
+    desc: "一間破舊的小木屋。你不確定他是不是在這裡睡覺，還是只在這裡藏心事。",
+    events: [
+      "賽德第一次被信任。",
+      "他決定陪同大家，而不是再逃。"
+    ],
+    chars: ["賽德", "雅索菲亞(菲亞)", "艾娜"],
+    image: "img/locations/zed_hideout.jpg",
+    typeLabel: "邊界"
+  },
+  moon_ring: {
+    name: "月圓之夜擂台 Moon Ring",
+    desc: "滿月之夜，狼族聚集此地。不是娛樂，是宣誓與審判。",
+    events: [
+      "雪狼口哨的承諾在此兌現。",
+      "誰能留下、誰會被放逐，會在這裡決定。"
+    ],
+    chars: ["穆林坦娜", "長老", "狼族"],
+    image: "img/locations/moon_ring.jpg",
+    typeLabel: "儀式場"
+  }
+};
+
+/* =========================
+   2. 角色資料（1~4季）
+   ========================= */
+
+/* 第一季 */
+const charactersSeason1 = [
+  {
+    key: "rit",
+    name: "里特 Rit",
+    role: "主角 / 安靜、謹慎的孩子\n三歲時失去媽媽，只剩下一顆珍珠。跟從事動物保育的爸爸生活，習慣一個人上山數山雀。",
+    desc: "他不是天選英雄。他只是覺得，如果他不站出來，沒有人會站出來。",
+    image: "img/characters/rit.jpg",
+    quote: "「如果我不先走，大家就不會走。」"
+  },
+  {
+    key: "isaac",
+    name: "艾薩克 Isaac",
+    role: "瘸腿獵人 / 要救回被雪狼囚禁的爸爸雷納德。\n他的腿被雪狼咬傷，卻還往森林裡走。",
+    desc: "他以為自己是累贅，後來發現其實大家都在追著他的勇敢跑。",
+    image: "img/characters/isaac.jpg",
+    quote: "「我可以走。別等我。」"
+  },
+  {
+    key: "miss",
+    name: "米斯老師 Miss",
+    role: "蘭薩爾小學三年級數學老師 / 里特的班導。\n熟練咒語，可以穿梭穆高爾森林，救過整間學校。",
+    desc: "她是那種會為孩子做任何事的大人，哪怕沒有人相信她。",
+    image: "img/characters/miss.jpg",
+    quote: "「我不會走。老師站在這裡，這裡就安全。」"
+  },
+  {
+    key: "aileen",
+    name: "艾琳 Aileen",
+    role: "穆高爾森林的守護精靈。\n用花草與食材煉藥，能喚回記憶、讓人沉睡百年。",
+    desc: "她不是溫柔，她是刺痛式的保護。她會救你，但她也會逼你面對真相。",
+    image: "img/characters/aileen.jpg",
+    quote: "「別哭，哭完要起來動手。」"
+  },
+  {
+    key: "rit_father",
+    name: "里特爸爸 Rit’s Father",
+    role: "動物保育員。\n想同時保護兒子與世界，結果兩邊都快失去。",
+    desc: "在里特眼中，他不是壞人，他只是常常太晚回頭。",
+    image: "img/characters/rit_father.jpg",
+    quote: "「對不起，我又回來太晚了。」"
+  }
+];
+
+/* 第二季 */
+const charactersSeason2 = [
+  {
+    key: "elder",
+    name: "長老 Elder（穆林汗亞）",
+    role: "穆高爾森林的領袖 / 狼族統治者。\n三百年來被哥哥的失蹤困住，一直在找下一個統治者。",
+    desc: "他口中說的是『守護族群』，但大家開始懷疑他真正守護的是自己一個人的痛。",
+    image: "img/characters/elder.jpg",
+    quote: "「我做的每一件事，都是為了族群。」"
+  },
+  {
+    key: "mulinhia",
+    name: "穆林希亞 Mulinhia",
+    role: "長老的哥哥 / 300年前失蹤。\n其實喝下隱形藥水後一直活著，以透明的身分陪在森林裡。",
+    desc: "他是活著的傳說，也是長老無法結束悲傷的理由。",
+    image: "img/characters/mulinhia.jpg",
+    quote: "「我從來沒有離開，只是你們看不到我。」"
+  },
+  {
+    key: "mulintanna",
+    name: "穆林坦娜 Mulintanna",
+    role: "里特的媽媽 / 被長老收為義女。\n永遠看起來一樣年輕，個性善良，對權力沒興趣。",
+    desc: "她像所有人的媽媽，但沒人真正知道她的過去。",
+    image: "img/characters/mulintanna.jpg",
+    quote: "「餓了嗎？先吃，等一下再哭也可以。」"
+  },
+  {
+    key: "kus",
+    name: "庫斯 Kus",
+    role: "人面狐狸 / 長老身邊的影子。\n聰明、勢利、不想承擔責任，但永遠待在權力中心。",
+    desc: "他嘴巴上說『我只是傳話』，可是在很多關鍵時刻，他就是那把刀。",
+    image: "img/characters/kus.jpg",
+    quote: "「我只是替大家把話講清楚而已。」"
+  },
+  {
+    key: "heather",
+    name: "海瑟 Heather",
+    role: "里特同學 / 金色短髮、開朗好奇。\n家境不好，常在學校待到天黑。最討厭早餐。",
+    desc: "她不會讓朋友一個人面對麻煩。她寧願一起被罵。",
+    image: "img/characters/heather.jpg",
+    quote: "「走啊，誰欺負你就是惹到我。」"
+  },
+  {
+    key: "dean",
+    name: "迪恩 Dean",
+    role: "里特同學 / 高大、愛吃、數學很好。\n嘴巴大聲但心很軟，是第一個擋在前面的人。",
+    desc: "他想證明自己不是多餘的人。",
+    image: "img/characters/dean.jpg",
+    quote: "「誰說我要逃？我就站在這裡啊。」"
+  }
+];
+
+/* 第三季 */
+const charactersSeason3 = [
+  {
+    key: "zed",
+    name: "賽德 Zed (Zedek)",
+    role: "流浪少年 / 先天魔法資質。\n一耳聽不見，不容易信任人，但內建正義感。",
+    desc: "他帶路，但沒人確定他帶大家去的是安全，還是審判。",
+    image: "img/characters/zed.jpg",
+    quote: "「別管我。我只是在還債。」"
+  },
+  {
+    key: "cecillia",
+    name: "賽西莉雅 Cecillia",
+    role: "瑟雷斯幽谷的水元素使。\n能形成水盾、水刃，替族人擋前線。",
+    desc: "她把自己當成武器，因為她覺得不夠強，就救不了妹妹。",
+    image: "img/characters/cecillia.jpg",
+    quote: "「我可以擋在前面。拜託你不要回頭。」"
+  },
+  {
+    key: "cecivya",
+    name: "賽西維雅 Cecivya",
+    role: "賽西莉雅的妹妹 / 重病。\n身體在崩壞，但她的意志讓別人願意拚到底。",
+    desc: "『我沒有要你保護我，我要你活下來。』",
+    image: "img/characters/cecivya.jpg",
+    quote: "「你活著，我才會安心。」"
+  },
+  {
+    key: "dr_shin",
+    name: "希恩博士 Dr. Shin",
+    role: "森林邊緣的隱士 / 天才發明家。\n懂科技，不懂魔法，但他想學魔法。",
+    desc: "他一直在幫大家準備逃生方案，好像早就知道戰爭會來。",
+    image: "img/characters/dr_shin.jpg",
+    quote: "「我不會魔法沒關係，我可以造一個出來。」"
+  },
+  {
+    key: "trinise",
+    name: "翠妮絲 Trinise",
+    role: "風與樹的操控者 / 艾琳的表姊。\n能用風傳遞訊息，能讓森林加入戰鬥。",
+    desc: "她常常猶豫，但不是因為她怕，而是因為她知道一旦動手就是沒辦法回頭。",
+    image: "img/characters/trinise.jpg",
+    quote: "「我會保護你們，但你們要保證活下來。」"
+  },
+  {
+    key: "toby",
+    name: "托歐比 Toby",
+    role: "迷霧鎮的果子術士 / 70歲。\n雙眼受傷卻能跟孩子的心靈說話。",
+    desc: "他不是在照顧孩子，他是在拼命讓孩子還能有童年。",
+    image: "img/characters/toby.jpg",
+    quote: "「你還是小孩，允許一下自己當小孩可以嗎？」"
+  },
+  {
+    key: "marins",
+    name: "瑪琳絲 Marins",
+    role: "托歐比的妻子 / 迷霧鎮的照護者。\n擅長果子配方，個性溫暖。",
+    desc: "她把每一個走進家門的孩子都當成『我們的孩子』。",
+    image: "img/characters/marins.jpg",
+    quote: "「來，先喝一口，世界等一下再打也不遲。」"
+  },
+  {
+    key: "marcus",
+    name: "米斯爸爸 馬庫斯 Marcus",
+    role: "前植物學者 / 米斯老師的父親。\n年老重病、滿是悔恨。",
+    desc: "他錯過了當好父親的時間，只能用最後的時間說：『妳做得很好。真的很好。』",
+    image: "img/characters/marcus.jpg",
+    quote: "「我真的有在聽，你說你累，我有聽到。」"
+  },
+  {
+    key: "fia",
+    name: "菲亞 Fia / 雅索菲亞 Yaso Fia",
+    role: "被收養的女孩 / 狼族印記。\n其實來自掌管雪的雅索家族。",
+    desc: "她最後發現自己其實是掌管雪的雅索家族之女——雅索菲亞。",
+    image: "img/characters/fia.jpg",
+    quote: "「我不需要誰保護。我自己就是武器。」"
+  },
+  {
+    key: "aina",
+    name: "艾娜 Aina",
+    role: "神祕女探險家 / 身體帶著奇怪的病症。\n行走幾里就得休息，身上會冒出綠色與紫色斑點。",
+    desc: "她是艾薩克失蹤的親妹妹。她不想讓他擔心，所以她一直裝沒事。",
+    image: "img/characters/aina.jpg",
+    quote: "「我真的還好，不要跟他講好嗎？」"
+  },
+  {
+    key: "kadar",
+    name: "卡達爾 Kadar",
+    role: "鐵甲巨獸軍團領袖。\n他盯上的不是森林的土地，而是森林的魔力本身。",
+    desc: "他相信『奪走』才是生存方式，直到遇到這群願意為彼此擋刀的小孩。",
+    image: "img/characters/kadar.jpg",
+    quote: "「我從沒想過有人會替別人擋刀，直到我看見你們。」"
+  },
+  {
+    key: "ironbeasts",
+    name: "鐵甲巨獸 Iron Beasts",
+    role: "重裝部隊 / 侵入者的武力壓制線。\n半有機、半機械，能抽離森林能量做成武器。",
+    desc: "它們不是怪物，它們是戰術。每一隻出現都代表一個地方要消失了。",
+    image: "img/characters/ironbeasts.jpg",
+    quote: "「森・林・資・源：回收中。」"
+  },
+  {
+    key: "aeshir",
+    name: "艾希爾 Aeshir",
+    role: "時間系女巫 / 回溯尋跡的獵人。\n她能用藥水回看某人的路徑，但代價是可能被困在時間裂縫。",
+    desc: "她不一定站在孩子們這邊，但只要是『找孩子』，她永遠第一個出發。",
+    image: "img/characters/aeshir.jpg",
+    quote: "「目標在哪裡？我去把他帶回來。」"
+  },
+  {
+    key: "chino",
+    name: "奇諾 Chino",
+    role: "迷霧鎮的魔法道具店老闆。\n賣的東西看起來像玩具，其實一半是軍火、一半是急救包。",
+    desc: "他說他只是做生意，但他免費把最好的一批留給還不會報價的孩子們。",
+    image: "img/characters/chino.jpg",
+    quote: "「壞人超有錢，但你們不用付錢。這不叫偏心，這叫投資。」"
+  },
+  {
+    key: "moonshadow",
+    name: "月影 Moonshadow",
+    role: "古堡的守護者 / 黑暗術式使用者。\n外表像年輕巫師，但靈魂是舊時代的殘留。",
+    desc: "他看起來像壞人，講話也很壞，可是他救了每一個走進古堡的孩子。",
+    image: "img/characters/moonshadow.jpg",
+    quote: "「我又不是你們的保姆，只是剛好路過。」"
+  }
+];
+
+/* 第四季（新角色草案 / 至少8位） */
+const charactersSeason4 = [
+  {
+    key: "nova",
+    name: "諾瓦 Nova",
+    role: "神秘觀測者 / 似乎知道未來走向的孩子。\n他像是在記錄，而不是參與。",
+    desc: "沒有人知道他從哪裡來，也沒有人記得他第一次出現的時間點。",
+    image: "img/characters/nova.jpg",
+    quote: "「我只是寫下發生過的事。不是我讓它發生。」"
+  },
+  {
+    key: "echo",
+    name: "艾可 Echo",
+    role: "回音系魔法使 / 能複製他人一瞬間的力量。\n代價是她自己會忘掉一段記憶。",
+    desc: "她願意把自己的記憶拿去換別人的平安。",
+    image: "img/characters/echo.jpg",
+    quote: "「我還記得你嗎？沒關係。你記得我就好。」"
+  },
+  {
+    key: "warden",
+    name: "看守者 Warden",
+    role: "古堡的審判者 / 月影以外的另一層防線。\n負責決定誰能活著離開。",
+    desc: "他說自己『只是規則』，但他其實也在掙扎什麼叫公平。",
+    image: "img/characters/warden.jpg",
+    quote: "「我不恨你們。我只是不能放你們走。」"
+  },
+  {
+    key: "veil",
+    name: "薇爾 Veil",
+    role: "影幕使者 / 專門隱藏受傷者的去向，讓敵人追不到。",
+    desc: "她的存在，讓重傷的人至少有一個晚上能睡。",
+    image: "img/characters/veil.jpg",
+    quote: "「閉眼。沒有人會找到你。」"
+  },
+  {
+    key: "ember",
+    name: "燃痕 Ember",
+    role: "焰痕戰士 / 來自被燒毀的埃爾達瓦殘部。\n他把城市的灰燼當成盔甲。",
+    desc: "他不是想復仇。他只是拒絕讓下一個城再被燒一次。",
+    image: "img/characters/ember.jpg",
+    quote: "「火奪走的，我會一點一點拿回來。」"
+  },
+  {
+    key: "gear",
+    name: "吉爾 Gear",
+    role: "希恩博士的臨時助手 / 半吊子修理天才。\n喜歡亂改造別人的武器。",
+    desc: "他覺得世界末日很酷，因為大家終於願意讓他動刀那些機械怪獸了。",
+    image: "img/characters/gear.jpg",
+    quote: "「我可以讓它變更兇。你要不要看？」"
+  },
+  {
+    key: "oracle",
+    name: "奧蕾可 Oracle",
+    role: "狼族古老記憶的口述者 / 行動不便。\n她能背出三百年前的對話，用的是別人的聲音。",
+    desc: "她沒有超能力，她就是歷史本身在說話。",
+    image: "img/characters/oracle.jpg",
+    quote: "「我不是在預言，我只是在重播。」"
+  },
+  {
+    key: "breach",
+    name: "布里奇 Breach",
+    role: "裂縫行者 / 專門把人從時間裂縫裡拉出來。\n代價是他自己會被時間咬一口。",
+    desc: "他身上有很多不是他這個年紀應該有的傷疤。",
+    image: "img/characters/breach.jpg",
+    quote: "「出去以後記得一件事：我是替換品。你們不是。」"
+  }
+];
+
+/* =========================
+   3. 道具
+   ========================= */
+const artifacts = [
+  {
+    name: "亞雷諾飛快列車的車票",
+    role: "旅程的召喚",
+    desc: "米斯老師為孩子們準備的車票，帶他們踏上第一段進入魔法世界的旅程。",
+    moment: "「我們8點20分在鷹鳥月台樓梯下集合，我已經買好四張票。」",
+    image: "img/items/train_ticket.jpg"
+  },
+  {
+    name: "神秘芒草",
+    role: "指路的信物",
+    desc: "艾薩克在夢裡交給里特的一根芒草，能在最困難的時候指引方向。",
+    moment: "『這能幫助你在困難時找到方向。』",
+    image: "img/items/grass_blade.jpg"
+  },
+  {
+    name: "迷霧鎮的魔法果子",
+    role: "情緒與力量的補給",
+    desc: "每一顆果子都有意義：希望、勇氣、穩定、治癒。孩子們在迷霧鎮第一次吃到『安全感』。",
+    moment: "「記住，每一顆的魔法都來自你的內心。」",
+    image: "img/items/magic_fruit.jpg"
+  },
+  {
+    name: "瑪琳絲太太的魔法料理",
+    role: "療癒與歸屬感",
+    desc: "黃色=明亮的心，橙色=溫暖與穩定，紫色飯糰=友誼。她用食物告訴孩子：你有地方屬於你。",
+    moment: "「有時候你可以再勇敢一點。」",
+    image: "img/items/comfort_food.jpg"
+  },
+  {
+    name: "菲亞的狼族標記",
+    role: "身世烙印",
+    desc: "她手臂上的紅色符號，象徵狼族血脈。每次發熱，都像命運在喊她名字。",
+    moment: "「我身上有一些奇怪的符號，但……很帥吧！」",
+    image: "img/items/fia_mark.jpg"
+  },
+  {
+    name: "《時間秘境》",
+    role: "穿越線索",
+    desc: "迪恩帶來的書，記錄如何用時間打開不同時空的門，是回到穆高爾森林的關鍵理論。",
+    moment: "「只要掌握時間秘境，就能在時空中自由穿梭。」",
+    image: "img/items/time_book.jpg"
+  },
+  {
+    name: "時光沙漏",
+    role: "關鍵時刻的穿越器",
+    desc: "希恩博士交給他們的小沙漏，能短暫撕開時空，但只能在最重要的時機使用。",
+    moment: "「只能在最關鍵的時刻使用。」",
+    image: "img/items/time_hourglass.jpg"
+  },
+  {
+    name: "黑夜圖畫筆 / 自動捕夢機",
+    role: "夢境介面裝置",
+    desc: "希恩博士的發明。夜裡畫的東西能成真，夢裡的影像能被帶到現實。",
+    moment: "「『夢』不只是夢，它變成證據。」",
+    image: "img/items/dream_tools.jpg"
+  },
+  {
+    name: "定向之晶",
+    role: "迷失空間的指南",
+    desc: "月影交給他們的七萬五千年前水晶，能在扭曲空間中指向『回家的路』。",
+    moment: "「在迷失空間裡，這顆晶體會指向回去的那條線。」",
+    image: "img/items/navigation_crystal.jpg"
+  },
+  {
+    name: "隱形藥水",
+    role: "大人的勇氣",
+    desc: "瑪琳絲太太使用的藥水。她寧可親自去找孩子，也不願坐著等消息。",
+    moment: "「只要一滴，你就暫時不會被任何人發現。」",
+    image: "img/items/invisible_potion.jpg"
+  },
+  {
+    name: "雪狼口哨",
+    role: "庇護的信號",
+    desc: "艾薩克送給穆林坦娜的口哨，能召喚狼群守護她。這不是武器，是承諾。",
+    moment: "「你不會一個人。」",
+    image: "img/items/wolf_whistle.jpg"
+  },
+  {
+    name: "艾希爾的時間回溯藥水",
+    role: "追蹤與救援",
+    desc: "滴在眼睛裡就能看到目標曾經走過的路線，但若沒趕上，使用者可能迷失在時間線中。",
+    moment: "「藥效結束前，必須找到孩子。」",
+    image: "img/items/time_recall_potion.jpg"
+  }
+];
+
+/* =========================
+   4. Music / 九首歌
+   ========================= */
+const musicTracks = [
+  { title: "小男孩", who: "第一二季主題曲", video: "" },
+  { title: "遠行", who: "第一二季主題曲", video: "" },
+  { title: "尋找", who: "第一二季主題曲", video: "" },
+  { title: "遙遠的地方", who: "第一二季主題曲", video: "" },
+  { title: "失去的記憶", who: "第一二季主題曲", video: "" },
+  { title: "最好的一天", who: "第一二季主題曲", video: "" },
+  { title: "蘭薩爾小學", who: "第一二季主題曲", video: "" },
+  { title: "穆高爾傳說", who: "兩周年紀念曲", video: "" },
+  { title: "勇敢過", who: "兩周年紀念曲", video: "" }
+];
+
+/* =========================
+   5. Episodes / 分集
+   - 新增第四季 (至少8集)
+   ========================= */
+const episodesData = {
+  1: [
+    { title: "01 最遙遠的地方", desc: "一切從不該被找到的地方開始。里特遇見艾薩克，雪狼傳說甦醒。", image: "img/episodes/s1_ep1.jpg" },
+    { title: "02 被遺忘的記憶", desc: "有些記憶被藏起來不是為了保護你，而是為了保護別人。", image: "img/episodes/s1_ep2.jpg" },
+    { title: "03 細雪下的勇者", desc: "勇敢不是不怕，而是明明很怕還是站出去。", image: "img/episodes/s1_ep3.jpg" },
+    { title: "04 逆轉的時間", desc: "時間不是只往前走。在穆高爾森林，它也會回頭審問你。", image: "img/episodes/s1_ep4.jpg" },
+    { title: "05 穆高爾森林", desc: "森林不是背景。森林會聽，會記得，甚至會回應。", image: "img/episodes/s1_ep5.jpg" },
+    { title: "06 月圓的狼嚎", desc: "滿月的夜晚，狼群不是在呼救。他們是在召喚誰回家。", image: "img/episodes/s1_ep6.jpg" },
+    { title: "07 埃爾達瓦城之戰", desc: "第一次真正的戰鬥。這已經不只是冒險了，這是生存。", image: "img/episodes/s1_ep7.jpg" }
+  ],
+  2: [
+    { title: "01 白雪覆蓋的大門", desc: "門是關著的，還是被封印的？差別在於誰在敲。", image: "img/episodes/s2_ep1.jpg" },
+    { title: "02 逝去的石墩", desc: "不是普通石頭，是一段被刪掉的真相。", image: "img/episodes/s2_ep2.jpg" },
+    { title: "03 長老的哥哥", desc: "長老說的故事，和他哥哥活著的版本，哪個才是真的？", image: "img/episodes/s2_ep3.jpg" },
+    { title: "04 融雪的蘭薩爾小學", desc: "這是他們最後還能裝成普通小孩的地方。", image: "img/episodes/s2_ep4.jpg" },
+    { title: "05 拖把上的驅散咒語", desc: "『只是清潔』的拖把，其實撐住了整個學校的安全線。", image: "img/episodes/s2_ep5.jpg" },
+    { title: "06 黑暗降臨的校慶典禮", desc: "慶典本來應該安全。但這一夜之後，每個人都暴露了。", image: "img/episodes/s2_ep6.jpg" },
+    { title: "07 平安的聖誕夜", desc: "『平安』兩個字從來沒那麼難講出口。因為不是每個人都會看到明天。", image: "img/episodes/s2_ep7.jpg" },
+    { title: "08 大火下的埃爾達瓦城", desc: "城市不是燃燒了，而是被審判了。", image: "img/episodes/s2_ep8.jpg" },
+    { title: "09 消失的雪狼珍珠", desc: "有些東西消失以後才知道它是整個族群的命脈。", image: "img/episodes/s2_ep9.jpg" }
+  ],
+  3: [
+    { title: "01 迷霧鎮的菲亞", desc: "她開始懷疑：我是誰的孩子？還是我根本不是任何人的？", image: "img/episodes/s3_ep1.jpg" },
+    { title: "02 芒草的時間", desc: "一根芒草像一把鑰匙，能打開回家的路，也能打開過去。", image: "img/episodes/s3_ep2.jpg" },
+    { title: "03 米斯的爸爸", desc: "『家人』到底是血緣，還是誰還願意等你回來。", image: "img/episodes/s3_ep3.jpg" },
+    { title: "04 卡達爾的入侵", desc: "外面的人終於踏進來了。和平只剩回憶。", image: "img/episodes/s3_ep4.jpg" },
+    { title: "05 古城堡的月影", desc: "古堡不是廢墟，它還在呼吸，還在守護一個被忘掉的名字。", image: "img/episodes/s3_ep5.jpg" },
+    { title: "06 奇諾的魔法道具店", desc: "看起來像玩笑，但裡面每一樣東西都能改變戰局。", image: "img/episodes/s3_ep6.jpg" },
+    { title: "07 穆林坦娜的生日派對", desc: "不是所有戰鬥用武器。有些是用擁抱和蛋糕。", image: "img/episodes/s3_ep7.jpg" },
+    { title: "08 少年賽德的引路", desc: "他帶路，但沒有保證那條路是安全的。", image: "img/episodes/s3_ep8.jpg" },
+    { title: "09 艾娜的秘密", desc: "她不是在隱瞞，她只是在撐住自己不要崩壞。", image: "img/episodes/s3_ep9.jpg" },
+    { title: "10 雪之雅索家族", desc: "這不是身世揭露，這是你到底屬於哪一邊的審判。", image: "img/episodes/s3_ep10.jpg" },
+    { title: "11 魔法的祕密花園", desc: "森林正在選擇：誰可以留下，誰會被抹去。", image: "img/episodes/s3_ep11.jpg" }
+  ],
+  4: [
+    { title: "01 古堡的裂縫", desc: "古堡底下出現新的通道，月影警告：『那裡的東西不是給小孩看的。』", image: "img/episodes/s4_ep1.jpg" },
+    { title: "02 被記錄的人", desc: "諾瓦開始出現在大家身邊，像是在觀察，而不是參戰。", image: "img/episodes/s4_ep2.jpg" },
+    { title: "03 影幕之下", desc: "薇爾把受傷的人藏起來，敵人整晚都找不到他們。", image: "img/episodes/s4_ep3.jpg" },
+    { title: "04 焰痕回來", desc: "燃痕從埃爾達瓦廢墟帶回一個火種。他說那不是火，那是證詞。", image: "img/episodes/s4_ep4.jpg" },
+    { title: "05 裂縫行者", desc: "布里奇把一個孩子從時間裂縫裡拖出來，自己卻老了幾歲。", image: "img/episodes/s4_ep5.jpg" },
+    { title: "06 真正的審判者", desc: "古堡的看守者終於正面現身：『這裡不是避難所，這裡是審判所。』", image: "img/episodes/s4_ep6.jpg" },
+    { title: "07 借來的力量", desc: "艾可複製了別人的能力救了大家，醒來後她不記得自己是誰。", image: "img/episodes/s4_ep7.jpg" },
+    { title: "08 不是預言", desc: "奧蕾可說出三百年前的一句話：『他們會回來找你。』大家才發現，戰爭不是新的。", image: "img/episodes/s4_ep8.jpg" }
+  ]
+};
+
+/* =========================
+   6. TIMELINE 關鍵事件
+   (每張都要圖)
+   ========================= */
+const timelineEvents = [
+  {
+    title: "雪狼現身",
+    when: "Season 1",
+    desc: "傳說中的雪狼不是故事書，是活生生的選邊站。從這刻開始，孩子們再也不是『只是小孩』。",
+    image: "img/timeline/timeline_wolf.jpg"
+  },
+  {
+    title: "埃爾達瓦城大火",
+    when: "Season 2",
+    desc: "城市不是被燒，而是被審判。每一個倖存的人都有一個不能說的名字。",
+    image: "img/timeline/timeline_fire.jpg"
+  },
+  {
+    title: "鐵甲巨獸入侵",
+    when: "Season 3",
+    desc: "半有機半機械的軍團開始抽走森林能量。大自然第一次不是背景，而是戰利品。",
+    image: "img/timeline/timeline_beasts.jpg"
+  },
+  {
+    title: "古堡的詛咒",
+    when: "Season 4",
+    desc: "古堡地下室被打開。那不是遺跡，那是監獄。被封印的東西並不打算再沉睡。",
+    image: "img/timeline/timeline_castle.jpg"
+  }
+];
+
+/* =========================
+   7. FACTIONS 勢力 / 陣營
+   (每張都要圖)
+   ========================= */
+const factions = [
+  {
+    name: "穆高爾森林守護線",
+    desc: "艾琳、翠妮絲、賽西莉雅這一派。他們相信森林是『生命體』，不是資源。任何破壞都會被視為宣戰。",
+    image: "img/factions/faction_forest.jpg"
+  },
+  {
+    name: "迷霧鎮照護網",
+    desc: "托歐比、瑪琳絲、奇諾。他們用食物、藥草、道具，讓孩子們可以休息、療傷、再出發。",
+    image: "img/factions/faction_mist.jpg"
+  },
+  {
+    name: "鐵甲巨獸軍團",
+    desc: "卡達爾率領的侵略武力。目標是奪取森林的魔法能源，將其工業化、武器化。",
+    image: "img/factions/faction_beasts.jpg"
+  },
+  {
+    name: "古堡守門層",
+    desc: "月影、看守者、薇爾。他們不一定是『正派』，但他們在守一扇不能打開的門。",
+    image: "img/factions/faction_castle.jpg"
+  }
+];
+
+/* =========================
+   8. WOLF CLANS 三個狼族血脈
+   (每張要圖)
+   ========================= */
+const wolfClans = [
+  {
+    name: "雪之雅索家族",
+    desc: "以冰與記憶為契約。菲亞（雅索菲亞）來自這個血脈，能喚起暴雪，也能喚起過去。",
+    image: "img/wolfclans/wolf_snowline.jpg"
+  },
+  {
+    name: "月圓之牙",
+    desc: "月圓之夜在擂台上宣示忠誠的古老狼族派系。他們相信力量＝資格。",
+    image: "img/wolfclans/wolf_moonfang.jpg"
+  },
+  {
+    name: "長老之脈",
+    desc: "由長老與穆林希亞一系延伸。這一脈不是最強，但最久。他們是記憶本身。",
+    image: "img/wolfclans/wolf_elderline.jpg"
+  }
+];
+
+/* =========================
+   9. DOM
+   ========================= */
+const panelType    = document.getElementById("panelType");
+const panelName    = document.getElementById("panelName");
+const panelImg     = document.getElementById("panelImg");
+const panelImgWrap = document.getElementById("panelImgWrap");
+const panelDesc    = document.getElementById("panelDesc");
+const panelEvents  = document.getElementById("panelEvents");
+const panelChars   = document.getElementById("panelChars");
+
+const charGridSeason1 = document.getElementById("charGridSeason1");
+const charGridSeason2 = document.getElementById("charGridSeason2");
+const charGridSeason3 = document.getElementById("charGridSeason3");
+const charGridSeason4 = document.getElementById("charGridSeason4");
+
+const artifactGrid   = document.getElementById("artifactGrid");
+const musicGrid      = document.getElementById("musicGrid");
+
+const season1Row     = document.getElementById("season1Row");
+const season2Row     = document.getElementById("season2Row");
+const season3Row     = document.getElementById("season3Row");
+const season4Row     = document.getElementById("season4Row");
+
+const timelineGrid   = document.getElementById("timelineGrid");
+const factionGrid    = document.getElementById("factionGrid");
+const wolfGrid       = document.getElementById("wolfGrid");
+
+/* Modal */
+const charModal   = document.getElementById("charModal");
+const modalClose  = document.getElementById("modalClose");
+const modalImg    = document.getElementById("modalImg");
+const modalName   = document.getElementById("modalName");
+const modalRole   = document.getElementById("modalRole");
+const modalDesc   = document.getElementById("modalDesc");
+const modalQuote  = document.getElementById("modalQuote");
+
+/* =========================
+   10. Render funcs
+   ========================= */
+function renderLocation(id){
+  const loc = locations[id];
+  if(!loc) return;
+  panelType.textContent = loc.typeLabel || "LOCATION";
+  panelName.textContent = loc.name;
+  panelDesc.textContent = loc.desc;
+
+  if(loc.image){
+    panelImg.src = loc.image;
+    panelImgWrap.style.display = "block";
+  } else {
+    panelImgWrap.style.display = "none";
+  }
+
+  panelEvents.innerHTML = "";
+  loc.events.forEach(ev=>{
+    const li=document.createElement("li");
+    li.textContent=ev;
+    panelEvents.appendChild(li);
+  });
+
+  panelChars.innerHTML = "";
+  loc.chars.forEach(ch=>{
+    const li=document.createElement("li");
+    li.textContent=ch;
+    panelChars.appendChild(li);
+  });
+}
+
+document.querySelectorAll(".location-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    renderLocation(btn.dataset.location);
+  });
+});
+
+/* 角色卡 + Modal */
+function createCharacterCard(ch){
+  const card = document.createElement("div");
+  card.className = "char-card";
+  card.dataset.key = ch.key || "";
+  card.innerHTML = `
+    <div class="hud-corner"></div>
+    <div class="hud-corner-br"></div>
+    <div class="char-img">
+      <img src="${ch.image}" alt="${ch.name}">
+    </div>
+    <div class="char-info">
+      <div class="char-name">${ch.name}</div>
+      <div class="char-role">${ch.role}</div>
+      <div class="char-desc">${ch.desc}</div>
+    </div>
+  `;
+  card.addEventListener("click", ()=>openModal(ch));
+  return card;
+}
+
+function renderCharacterGroup(list, containerEl){
+  containerEl.innerHTML = "";
+  list.forEach(ch=>{
+    const card = createCharacterCard(ch);
+    containerEl.appendChild(card);
+  });
+}
+
+/* 道具 */
+function renderArtifacts(){
+  artifactGrid.innerHTML = "";
+  artifacts.forEach(item=>{
+    const card = document.createElement("div");
+    card.className = "char-card";
+    card.innerHTML = `
+      <div class="hud-corner"></div>
+      <div class="hud-corner-br"></div>
+      <div class="char-img">
+        <img src="${item.image}" alt="${item.name}">
+      </div>
+      <div class="char-info">
+        <div class="char-name">${item.name}</div>
+        <div class="char-role">${item.role}</div>
+        <div class="char-desc">${item.desc}</div>
+        <div class="char-desc" style="font-size:12px;color:#8bb7ff;margin-top:8px;text-shadow:0 0 8px rgba(139,183,255,.8),0 0 24px rgba(139,183,255,.4);">
+          ${item.moment}
+        </div>
+      </div>
+    `;
+    artifactGrid.appendChild(card);
+  });
+}
+
+/* Music */
+function renderMusic(){
+  musicGrid.innerHTML = "";
+  musicTracks.forEach(track=>{
+    const card = document.createElement("div");
+    card.className = "music-card";
+    card.innerHTML = `
+      <div class="hud-corner"></div>
+      <div class="hud-corner-br"></div>
+      <div class="music-title">${track.title}</div>
+      <div class="music-meta">${track.who}</div>
+      <div class="music-video">
+        ${track.video ? track.video : "MV WIP"}
+      </div>
+    `;
+    musicGrid.appendChild(card);
+  });
+}
+
+/* Episodes */
+function renderSeasonIntoRow(seasonNumber, rowEl){
+  const list = episodesData[seasonNumber] || [];
+  rowEl.innerHTML = "";
+  list.forEach(ep=>{
+    const card = document.createElement("div");
+    card.className="episode-card";
+    card.innerHTML=`
+      <div class="episode-img-wrap">
+        <img src="${ep.image}" alt="${ep.title}">
+      </div>
+      <div class="episode-info">
+        <div class="episode-title">${ep.title}</div>
+        <div class="episode-desc">${ep.desc}</div>
+      </div>
+    `;
+    rowEl.appendChild(card);
+  });
+}
+
+/* Timeline */
+function renderTimeline(){
+  timelineGrid.innerHTML = "";
+  timelineEvents.forEach(ev=>{
+    const card = document.createElement("div");
+    card.className = "timeline-card";
+    card.innerHTML = `
+      <div class="hud-corner"></div>
+      <div class="hud-corner-br"></div>
+      <div class="timeline-img">
+        <img src="${ev.image}" alt="${ev.title}">
+      </div>
+      <div class="timeline-info">
+        <div class="timeline-title">${ev.title}</div>
+        <div class="timeline-when">${ev.when}</div>
+        <div class="timeline-desc">${ev.desc}</div>
+      </div>
+    `;
+    timelineGrid.appendChild(card);
+  });
+}
+
+/* Factions */
+function renderFactions(){
+  factionGrid.innerHTML = "";
+  factions.forEach(fc=>{
+    const card = document.createElement("div");
+    card.className = "faction-card";
+    card.innerHTML = `
+      <div class="hud-corner"></div>
+      <div class="hud-corner-br"></div>
+      <div class="faction-img">
+        <img src="${fc.image}" alt="${fc.name}">
+      </div>
+      <div class="faction-info">
+        <div class="faction-name">${fc.name}</div>
+        <div class="faction-desc">${fc.desc}</div>
+      </div>
+    `;
+    factionGrid.appendChild(card);
+  });
+}
+
+/* Wolf Clans */
+function renderWolfClans(){
+  wolfGrid.innerHTML = "";
+  wolfClans.forEach(w=>{
+    const card = document.createElement("div");
+    card.className = "wolf-card";
+    card.innerHTML = `
+      <div class="hud-corner"></div>
+      <div class="hud-corner-br"></div>
+      <div class="wolf-img">
+        <img src="${w.image}" alt="${w.name}">
+      </div>
+      <div class="wolf-info">
+        <div class="wolf-name">${w.name}</div>
+        <div class="wolf-desc">${w.desc}</div>
+      </div>
+    `;
+    wolfGrid.appendChild(card);
+  });
+}
+
+/* =========================
+   11. Modal
+   ========================= */
+function openModal(ch){
+  modalImg.src   = ch.image;
+  modalName.textContent = ch.name;
+  modalRole.textContent = ch.role;
+  modalDesc.textContent = ch.desc;
+  modalQuote.textContent = ch.quote || "";
+  charModal.style.display = "flex";
+}
+function closeModal(){
+  charModal.style.display = "none";
+}
+modalClose.addEventListener("click", closeModal);
+charModal.addEventListener("click",(e)=>{
+  if(e.target===charModal) closeModal();
+});
+
+/* =========================
+   12. 粒子雪
+   ========================= */
+(function initSnow(){
+  const canvas = document.getElementById("snowCanvas");
+  const ctx = canvas.getContext("2d");
+  let w = canvas.width = window.innerWidth;
+  let h = canvas.height = window.innerHeight;
+
+  const flakes = [];
+  const FLAKE_COUNT = 140;
+
+  function random(min,max){return Math.random()*(max-min)+min;}
+
+  function createFlakes(){
+    for(let i=0;i<FLAKE_COUNT;i++){
+      flakes.push({
+        x: random(0,w),
+        y: random(0,h),
+        r: random(1,3),
+        d: random(0.5,1.5),
+        vx: random(-0.5,0.5),
+        vy: random(0.5,1.5),
+        alpha: random(0.3,0.9)
+      });
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    flakes.forEach(f=>{
+      ctx.globalAlpha = f.alpha;
+      ctx.beginPath();
+      ctx.arc(f.x,f.y,f.r,0,Math.PI*2,true);
+      ctx.fill();
+    });
+    ctx.restore();
+    update();
+    requestAnimationFrame(draw);
+  }
+
+  function update(){
+    for(let i=0;i<flakes.length;i++){
+      const f = flakes[i];
+      f.x += f.vx;
+      f.y += f.vy*f.d;
+      if(f.y>h){
+        f.y = -10;
+        f.x = Math.random()*w;
+      }
+      if(f.x> w) f.x=0;
+      if(f.x< 0) f.x=w;
+    }
+  }
+
+  window.addEventListener("resize",()=>{
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  createFlakes();
+  draw();
+})();
+
+/* =========================
+   13. 初始化
+   ========================= */
+renderCharacterGroup(charactersSeason1, charGridSeason1);
+renderCharacterGroup(charactersSeason2, charGridSeason2);
+renderCharacterGroup(charactersSeason3, charGridSeason3);
+renderCharacterGroup(charactersSeason4, charGridSeason4);
+
+/* =========================
+   11. 四季章節卡片 → 捲動到對應季、並高亮
+   ========================= */
+(function initArcLinks(){
+  const arcLinks = document.querySelectorAll('.arc-link');
+
+  arcLinks.forEach(link => {
+    link.addEventListener('click', handleJump);
+    link.addEventListener('keypress', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleJump.call(link, e);
+      }
+    });
+  });
+
+  function handleJump(e){
+    const targetSel = this.getAttribute('data-target');
+    const targetBlock = document.querySelector(targetSel);
+    if (!targetBlock) return;
+
+    // 平滑捲到該季
+    targetBlock.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    // 讓該季的 keyart 發光一下
+    const keyart = targetBlock.querySelector('.highlightable');
+    if (keyart){
+      keyart.classList.add('glow');
+      setTimeout(()=> {
+        keyart.classList.remove('glow');
+      }, 800);
+    }
+  }
+})();
+
+
+renderArtifacts();
+renderMusic();
+
+renderSeasonIntoRow(1, season1Row);
+renderSeasonIntoRow(2, season2Row);
+renderSeasonIntoRow(3, season3Row);
+renderSeasonIntoRow(4, season4Row);
+
+renderTimeline();
+renderFactions();
+renderWolfClans();
+
+/* 預設一開始顯示某地點的資訊 */
+renderLocation("mist_town");
+
+</script>
+</body>
+</html>

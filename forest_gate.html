@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>雪狼男孩：穆高爾森林 - 封印之門</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Noto Sans TC", sans-serif;
+  color: #fff;
+  background: #000;
+  overflow: hidden;
+}
+
+/* === 背景動畫 === */
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.05) contrast(1.08);
+  z-index: 0;
+}
+
+/* === 漂浮光點 === */
+#particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.p {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #bff;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: drift 14s linear infinite;
+}
+@keyframes drift {
+  0% { transform: translateY(0) scale(1); opacity: 0.7; }
+  100% { transform: translateY(-100vh) scale(0.8); opacity: 0; }
+}
+
+/* === 煙霧 === */
+#fog {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 60%, rgba(100,180,160,0.25), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  animation: fogMove 12s ease-in-out infinite alternate;
+  z-index: 1;
+}
+@keyframes fogMove {
+  from { transform: translateX(-2%) scale(1.02); opacity: 0.3; }
+  to { transform: translateX(3%) scale(1.05); opacity: 0.6; }
+}
+
+/* === 導覽列 === */
+.topbar {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: rgba(50,70,100,0.45);
+  padding: 6px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  z-index: 100;
+}
+.chip {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+.chip:hover { background: rgba(255,255,255,0.25); transform: translateY(-2px); }
+
+/* === 對話框 === */
+#dialogueBox {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(20,30,60,0.78);
+  padding: 20px;
+  line-height: 1.6;
+  backdrop-filter: blur(8px);
+  display: none;
+  z-index: 90;
+}
+#dialogueCharacter { font-weight: bold; color: #ffd; margin-bottom: 6px; }
+#dialogueText { margin-right: 100px; font-size: 15px; }
+#nextBtn {
+  position: absolute;
+  right: 200px;
+  bottom: 20px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* === 任務框 === */
+#questBox {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  background: rgba(30,40,60,0.85);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: none;
+  z-index: 100;
+}
+#toggleQuest {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 100;
+}
+
+/* === 熱區 === */
+.hotspot {
+  position: absolute;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+.hotspot:hover { transform: scale(1.1); filter: drop-shadow(0 0 8px #bff); }
+#gate { top: 45%; left: 42%; width: 16%; height: 25%; background: rgba(255,255,255,0.03); }
+
+/* === 特效：狼影 === */
+#wolfShadow {
+  position: fixed;
+  bottom: 10%;
+  left: 60%;
+  width: 280px;
+  height: 160px;
+  background: url("images/wolf_silhouette.png") no-repeat center / contain;
+  opacity: 0;
+  animation: wolfAppear 6s ease-in-out 1 forwards;
+  z-index: 30;
+}
+@keyframes wolfAppear {
+  0% { opacity: 0; transform: scale(1.2) translateX(40px); }
+  30% { opacity: 0.7; transform: scale(1) translateX(0); }
+  80% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+</style>
+</head>
+
+<body>
+<!-- 🎥 背景影片 -->
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="video/forest_gate.mp4" type="video/mp4">
+</video>
+
+<div id="fog"></div>
+<div id="particles"></div>
+<div id="wolfShadow"></div>
+
+<!-- 導覽列 -->
+<div class="topbar">
+  <button class="chip" data-jump="isaac_home_basement_v4.1.html">🏠 返回地下室</button>
+  <button class="chip" data-jump="inventory.html">🎒 道具</button>
+</div>
+
+<!-- 對話 -->
+<div id="dialogueBox">
+  <div id="dialogueCharacter"></div>
+  <div id="dialogueText"></div>
+  <button id="nextBtn">下一句 ▶</button>
+</div>
+
+<!-- 任務 -->
+<div id="questBox"><h4>任務 Quest</h4><ul id="questList"></ul></div>
+<button id="toggleQuest">📜 任務</button>
+
+<!-- 熱區 -->
+<div id="gate" class="hotspot" title="封印之門"></div>
+
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+  // === 粒子 ===
+  const pC=document.getElementById("particles");
+  for(let i=0;i<40;i++){
+    const d=document.createElement("div");
+    d.className="p";
+    d.style.left=Math.random()*100+"vw";
+    d.style.top=Math.random()*100+"vh";
+    d.style.animationDelay=Math.random()*8+"s";
+    pC.appendChild(d);
+  }
+
+  // === BGM ===
+  const bgm=new Audio("audio/bgm_forest.mp3");
+  bgm.loop=true; bgm.volume=0.45;
+  const start=()=>{bgm.play().catch(()=>{});document.body.removeEventListener("click",start);}
+  document.body.addEventListener("click",start);
+
+  // === 任務切換 ===
+  const questBox=document.getElementById("questBox");
+  document.getElementById("toggleQuest").onclick=()=>{
+    questBox.style.display=(questBox.style.display==="block")?"none":"block";
+  };
+
+  // === 對話 ===
+  const dialogueBox=document.getElementById("dialogueBox");
+  const charEl=document.getElementById("dialogueCharacter");
+  const textEl=document.getElementById("dialogueText");
+  const lines=[
+    {n:"艾薩克",t:"這裡……就是穆高爾森林嗎？"},
+    {n:"艾薩克",t:"空氣裡有光的味道……父親說過，封印之門就在霧的盡頭。"},
+    {n:"？？？",t:"（低沉的聲音）別害怕，光在等著我們——"},
+    {n:"系統",t:"任務更新：調查封印之門。"}
+  ];
+  let index=0;
+  dialogueBox.style.display="block";
+  function showLine(){
+    const line=lines[index];
+    if(!line){ dialogueBox.style.display="none"; return; }
+    charEl.textContent=line.n;
+    textEl.textContent="";
+    let i=0;
+    const typer=setInterval(()=>{
+      textEl.textContent=line.t.slice(0,i++);
+      if(i>line.t.length) clearInterval(typer);
+    },40);
+  }
+  showLine();
+  document.getElementById("nextBtn").onclick=()=>{index++;showLine();};
+
+  // === 熱區互動 ===
+  document.getElementById("gate").onclick=()=>{
+    alert("封印之門泛起微光……裡面傳出低鳴。");
+    const q=document.createElement("li");
+    q.textContent="✅ 接觸封印之門，準備啟動雪狼印記。";
+    document.getElementById("questList").appendChild(q);
+
+    setTimeout(()=>{
+      alert("任務更新完成：啟動雪狼印記。即將進入下一章。");
+      document.body.style.transition="opacity 2s ease";
+      document.body.style.opacity="0";
+      setTimeout(()=>window.location.href="forest_inside.html",2000);
+    },2000);
+  };
+
+  // === 導覽按鈕 ===
+  document.querySelectorAll("[data-jump]").forEach(btn=>{
+    btn.onclick=()=>window.open(btn.dataset.jump,"_self");
+  });
+});
+
+// === 任務框自動避開對話框 ===
+const questBox = document.getElementById("questBox");
+const dialogueBox = document.getElementById("dialogueBox");
+
+// 初始位置
+questBox.style.transition = "bottom 0.6s ease";
+
+// 函式：根據對話狀態調整位置
+function adjustQuestPosition() {
+  if (dialogueBox.style.display === "block") {
+    questBox.style.bottom = "120px"; // 往上移動
+  } else {
+    questBox.style.bottom = "80px"; // 回原位
+  }
+}
+
+// 每次顯示或關閉對話都觸發
+const observer = new MutationObserver(adjustQuestPosition);
+observer.observe(dialogueBox, { attributes: true, attributeFilter: ["style"] });
+
+</script>
+</body>
+</html>

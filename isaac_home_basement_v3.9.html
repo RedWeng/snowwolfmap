@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>雪狼男孩：艾薩克之家 - 地下室篇 v4.2</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: "Noto Sans TC", sans-serif;
+  color: #fff;
+  background: #000;
+  overflow: hidden;
+}
+
+/* === 背景影片 === */
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.05) contrast(1.1);
+  z-index: 0;
+}
+
+/* === 煙霧 + 粒子 === */
+#fog {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 60%, rgba(120,160,200,0.25), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.4;
+  animation: fogMove 12s ease-in-out infinite alternate;
+  z-index: 1;
+}
+@keyframes fogMove {
+  from { transform: translateX(-2%) scale(1.02); opacity: 0.3; }
+  to { transform: translateX(3%) scale(1.04); opacity: 0.5; }
+}
+#particles {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.p {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #9cf;
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: fall 14s linear infinite;
+}
+@keyframes fall {
+  0% { transform: translateY(-10vh) translateX(0); }
+  100% { transform: translateY(110vh) translateX(var(--dx, 30px)); opacity: 0; }
+}
+
+/* === 導覽列 === */
+.topbar {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: rgba(50,70,100,0.45);
+  padding: 6px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  z-index: 100;
+}
+.chip {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+.chip:hover { background: rgba(255,255,255,0.25); transform: translateY(-2px); }
+
+/* === HUD === */
+#hud {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+.attr {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+/* === 對話框 === */
+#dialogueBox {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(20,30,60,0.78);
+  padding: 20px;
+  line-height: 1.6;
+  backdrop-filter: blur(8px);
+  display: none;
+  z-index: 90;
+}
+#dialogueCharacter { font-weight: bold; color: #ffd; margin-bottom: 6px; }
+#dialogueText { margin-right: 100px; font-size: 15px; }
+#nextBtn {
+  position: absolute;
+  right: 120px;
+  bottom: 24px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.25s ease;
+}
+
+/* === 任務框 === */
+#questBox {
+  position: fixed;
+  right: 20px;
+  bottom: 120px;
+  background: rgba(30,40,60,0.85);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: none;
+  z-index: 100;
+  transition: all 0.4s ease;
+}
+#toggleQuest {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 100;
+}
+
+/* === 光球與金屬箱 === */
+.hotspot {
+  position: absolute;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 5;
+}
+.hotspot:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 12px rgba(120,255,255,0.8));
+}
+#core {
+  top: 56%;
+  left: 47%;
+  width: 12%;
+  height: 22%;
+  background: url('images/hotspot_core.png') center/contain no-repeat;
+  opacity: 0.85;
+  animation: corePulse 3s ease-in-out infinite;
+}
+#box {
+  top: 74%;
+  left: 30%;
+  width: 14%;
+  height: 16%;
+  background: url('images/hotspot_box.png') center/contain no-repeat;
+  opacity: 0.9;
+}
+@keyframes corePulse {
+  0%,100% { filter: drop-shadow(0 0 6px #8ff) brightness(1); }
+  50% { filter: drop-shadow(0 0 18px #adf) brightness(1.3); }
+}
+</style>
+</head>
+
+<body>
+<video id="bgVideo" autoplay loop muted playsinline>
+  <source src="video/isaac_basement.mp4" type="video/mp4">
+</video>
+
+<div id="fog"></div>
+<div id="particles"></div>
+
+<div class="topbar">
+  <button class="chip" data-jump="isaac_home_study.html">⬆️ 回書房</button>
+  <button class="chip" data-jump="wardrobe.html">🧥 衣櫃</button>
+  <button class="chip" data-jump="inventory.html">🎒 道具</button>
+  <button id="bgmBtn" class="chip">🔊 BGM 開</button>
+</div>
+
+<div id="hud">
+  <div class="attr"><span>勇氣</span><b>0</b></div>
+  <div class="attr"><span>同理</span><b>0</b></div>
+  <div class="attr"><span>真實</span><b>0</b></div>
+</div>
+
+<div id="dialogueBox">
+  <div id="dialogueCharacter"></div>
+  <div id="dialogueText"></div>
+  <button id="nextBtn">下一句 ▶</button>
+</div>
+
+<div id="questBox"><h4>任務 Quest</h4><ul id="questList"></ul></div>
+<button id="toggleQuest">📜 任務</button>
+
+<!-- 熱區互動 -->
+<div id="core" class="hotspot" title="記憶核心"></div>
+<div id="box" class="hotspot" title="舊金屬箱"></div>
+
+<script>
+window.addEventListener("DOMContentLoaded",()=>{
+  // === 粒子 ===
+  const pC=document.getElementById("particles");
+  for(let i=0;i<35;i++){
+    const d=document.createElement("div");
+    d.className="p";
+    d.style.left=Math.random()*100+"vw";
+    d.style.animationDelay=Math.random()*8+"s";
+    d.style.setProperty("--dx",(Math.random()*40-20)+"px");
+    pC.appendChild(d);
+  }
+
+  // === 音樂 ===
+  const bgm=new Audio("audio/bgm_basement.mp3");
+  bgm.loop=true; bgm.volume=0.4;
+  const start=()=>{bgm.play().catch(()=>{});document.body.removeEventListener("click",start);}
+  document.body.addEventListener("click",start);
+
+  // === 按鈕導向 ===
+  document.querySelectorAll("[data-jump]").forEach(btn=>{
+    btn.onclick=()=>window.open(btn.dataset.jump,"_self");
+  });
+
+  // === 任務框 ===
+  const questBox=document.getElementById("questBox");
+  document.getElementById("toggleQuest").onclick=()=>{
+    questBox.style.display=(questBox.style.display==="block")?"none":"block";
+  };
+
+  // === 對話 ===
+  const dialogueBox=document.getElementById("dialogueBox");
+  const charEl=document.getElementById("dialogueCharacter");
+  const textEl=document.getElementById("dialogueText");
+  const lines=[
+    {n:"艾薩克",t:"這裡……好黑。電力系統幾乎壞了。"},
+    {n:"艾薩克",t:"父親常說，『光會記得那些相信它的人』……"},
+    {n:"系統",t:"任務更新：調查記憶核心與舊金屬箱。"}
+  ];
+  let index=0;
+  dialogueBox.style.display="block";
+  function showLine(){
+    const line=lines[index];
+    if(!line){ dialogueBox.style.display="none"; return; }
+    charEl.textContent=line.n;
+    textEl.textContent="";
+    let i=0;
+    const typer=setInterval(()=>{
+      textEl.textContent=line.t.slice(0,i++);
+      if(i>line.t.length) clearInterval(typer);
+    },40);
+  }
+  showLine();
+  document.getElementById("nextBtn").onclick=()=>{index++;showLine();};
+});
+</script>
+</body>
+</html>

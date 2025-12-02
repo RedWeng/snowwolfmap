@@ -1,0 +1,239 @@
+<!doctype html> 
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雪狼男孩｜雪之聖殿</title>
+<style>
+  :root{ --c-primary:#8bd3ff; --c-accent:#4fd5ff; --c-text:#e7f1ff; --c-sub:#b9d2ea; --blur:8px; }
+  html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:"Noto Sans TC",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  #bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.82) contrast(1.08);opacity:0;transition:opacity .8s ease;z-index:0;}
+  #poster{position:absolute;inset:0;background:url("img/temple_poster.jpg") center/cover no-repeat;z-index:0;opacity:1;transition:opacity .8s ease;}
+  canvas#particles, canvas#snow{position:absolute;inset:0;z-index:1;pointer-events:none;}
+  .chapter{position:absolute;top:24px;left:50%;transform:translateX(-50%);color:var(--c-text);letter-spacing:.18em;font-weight:600;z-index:5;text-shadow:0 0 24px #0009, 0 0 32px #0009;}
+  .dialog{
+    position:absolute;left:50%;bottom:40px;transform:translateX(-50%);
+    width:min(980px,92vw);z-index:5;display:grid;grid-template-columns:96px 1fr;gap:18px;align-items:end;
+    backdrop-filter:blur(var(--blur));background:linear-gradient(180deg,#0a1222aa,#03060c99);
+    border:1px solid #6fbaf833;border-radius:16px;padding:16px 18px;
+    box-shadow:0 0 36px #061427aa,inset 0 0 0 1px #8bd3ff22;
+  }
+  .avatar{width:96px;height:96px;border-radius:12px;background:#0a1222 center/contain no-repeat;border:1px solid #8bd3ff55;box-shadow:0 0 24px #2ec7ff33;}
+  .bubble{color:var(--c-text);line-height:1.6;}
+  .name{font-weight:800;letter-spacing:.12em;margin-bottom:6px;color:#cfe9ff}
+  .content{color:var(--c-sub);font-size:1.05rem}
+  .ctl{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+  .btn{background:linear-gradient(90deg,#1e6aff,#4fd5ff);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:.98rem;letter-spacing:.06em;cursor:pointer;box-shadow:0 0 16px #4fb4ff66;transition:.25s ease;}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 0 24px #8bd3ffaa;}
+  .btn.secondary{background:#0b1630cc;border:1px solid #8bd3ff55;box-shadow:none;color:#cfe9ff}
+  .btn.ghost{background:transparent;border:1px solid #8bd3ff33;color:#b9d2ea}
+
+  /* 選項：位置交給 JS 動態計算，這裡給預設保險值 */
+  .choices{
+    position:absolute;left:50%;transform:translateX(-50%);bottom:220px;
+    display:none;z-index:5;gap:12px;flex-direction:column;width:min(760px,92vw)
+  }
+  .choice{background:#0a1222cc;border:1px solid #8bd3ff55;border-radius:12px;padding:14px 16px;color:#d7eaff;cursor:pointer;transition:.2s;backdrop-filter:blur(6px)}
+  .choice:hover{border-color:#9fe0ff;box-shadow:0 0 18px #3ec7ff55;transform:translateY(-2px)}
+
+  .hud{position:absolute;right:18px;top:18px;z-index:6;display:flex;gap:12px;}
+  .hud .btn{padding:8px 12px;font-size:.9rem}
+  .inventory{position:absolute;left:18px;bottom:18px;z-index:6;display:flex;gap:8px;align-items:center;color:#cfe9ff;background:#0a1222b3;padding:10px 12px;border-radius:10px;border:1px solid #8bd3ff55;backdrop-filter:blur(6px)}
+</style>
+</head>
+<body>
+
+<div id="poster"></div>
+<video id="bgVideo" autoplay muted loop playsinline>
+  <source src="video/temple_loop.mp4" type="video/mp4">
+</video>
+
+<canvas id="particles"></canvas>
+<canvas id="snow"></canvas>
+
+<div class="chapter">CHAPTER I — 雪之聖殿 / The Snow Temple</div>
+
+<div class="hud">
+  <button class="btn secondary" id="btnBgm">BGM：開</button>
+  <button class="btn ghost" id="btnSkip">跳過對話</button>
+</div>
+
+<div class="inventory">
+  🎒 背包：<span id="invList">空</span>
+  <button class="btn secondary" id="btnUse">使用道具</button>
+</div>
+
+<div class="choices" id="choices"></div>
+
+<div class="dialog" id="dialog">
+  <div class="avatar" id="avatar"></div>
+  <div class="bubble">
+    <div class="name" id="name">—</div>
+    <div class="content" id="text">…</div>
+    <div class="ctl">
+      <button class="btn" id="btnNext">下一句 ▷</button>
+      <button class="btn secondary" id="btnAuto">自動播放</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 先抓所有 DOM（避免尚未初始化就被呼叫） ===== */
+const video = document.getElementById('bgVideo');
+const poster = document.getElementById('poster');
+const p = document.getElementById('particles'), pctx = p.getContext('2d');
+const s = document.getElementById('snow'), sctx = s.getContext('2d');
+const $name = document.getElementById('name');
+const $text = document.getElementById('text');
+const $avatar = document.getElementById('avatar');
+const $next = document.getElementById('btnNext');
+const $autoBtn = document.getElementById('btnAuto');
+const $skip = document.getElementById('btnSkip');
+const $choices = document.getElementById('choices');
+const $dialog = document.getElementById('dialog');
+const invList = document.getElementById('invList');
+let autoTimer=null;
+
+/* ===== 影片 / BGM（原樣） ===== */
+video.addEventListener('loadeddata', ()=>{ video.style.opacity=1; poster.style.opacity=0; });
+video.addEventListener('error', ()=>{ console.warn("Video load error"); poster.style.opacity=1; });
+
+const bgm = new Audio('audio/bgm_temple_intro.mp3');
+bgm.loop = true; bgm.volume = 0.45;
+document.getElementById('btnBgm').onclick = () => {
+  if(bgm.paused){ bgm.play(); event.currentTarget.textContent='BGM：開'; }
+  else{ bgm.pause(); event.currentTarget.textContent='BGM：關'; }
+};
+document.addEventListener('pointerdown', ()=>bgm.play().catch(()=>{}), { once:true });
+
+/* ===== 光粒 & 飄雪 ===== */
+let W,H; const particles=[], flakes=[];
+function placeChoices(){
+  // 防呆：元素還沒就緒就先跳出
+  if(!$dialog || !$choices) return;
+  const h = $dialog.getBoundingClientRect().height || 160;
+  $choices.style.bottom = (h + 32) + 'px';
+}
+function resize(){
+  W=p.width=s.width=innerWidth; H=p.height=s.height=innerHeight;
+  placeChoices();
+}
+addEventListener('resize',resize);
+
+function initParticles(){
+  particles.length=0; flakes.length=0;
+  for(let i=0;i<120;i++) particles.push({ x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+0.6, s:Math.random()*0.4+0.2, a:Math.random()*Math.PI*2 });
+  for(let i=0;i<180;i++) flakes.push({ x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+0.8, s:Math.random()*0.7+0.3, w:Math.random()*0.7+0.2 });
+}
+function animate(){
+  pctx.clearRect(0,0,W,H);
+  pctx.fillStyle='rgba(160,220,255,.7)';
+  particles.forEach(pt=>{ pt.a+=0.002; pt.y+=pt.s; pt.x+=Math.sin(pt.a)*0.2; if(pt.y>H){ pt.y=-5; pt.x=Math.random()*W; } pctx.beginPath(); pctx.arc(pt.x,pt.y,pt.r,0,Math.PI*2); pctx.fill(); });
+  sctx.clearRect(0,0,W,H);
+  sctx.fillStyle='rgba(255,255,255,.92)';
+  flakes.forEach(f=>{ f.y+=f.s; f.x+=Math.sin((f.y+f.x)*0.003)*f.w; if(f.y>H+6){ f.y=-6; f.x=Math.random()*W; } sctx.beginPath(); sctx.arc(f.x,f.y,f.r,0,Math.PI*2); sctx.fill(); });
+  requestAnimationFrame(animate);
+}
+
+/* ===== 對話系統 ===== */
+const inv = [];
+document.getElementById('btnUse').onclick = ()=>{ if(!inv.length){ alert('背包是空的。'); return; } alert('使用：'+inv[0]+'（範例，可擴充）'); };
+
+const script = [
+  { n:'海瑟', a:'img/avatars/heather.png', t:'「這裡……就是雪之聖殿？空氣像會發光一樣。」' },
+  { n:'迪恩', a:'img/avatars/dean.png',    t:'「小心腳下，這種地形很容易滑倒。里特，別離太遠！」' },
+  { n:'艾薩克', a:'img/avatars/isaac.png',  t:'「等等……你們有聽到嗎？像是…鐘聲在雪裡迴盪。」' },
+  { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「你們終於來了。孩子們，歡迎回到『雅索家族的殿堂』。」' },
+  { n:'海瑟', a:'img/avatars/heather.png', t:'「妳是……菲亞的母親？」' },
+  { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「我在此守望很久，為等你們帶回失落的勇氣與真實。」' },
+  { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「在你們面前有三條路——選擇，即是代價。」', choice:[
+      { label:'進入聖殿寶藏', goto:'treasure' },
+      { label:'離開聖殿', goto:'leave' },
+      { label:'尋找失蹤孩子', goto:'search' }
+    ]
+  }
+];
+
+const branches = {
+  treasure: [
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「寶藏不是金銀，而是會映照心意的『記憶之核』。」' },
+    { n:'艾薩克', a:'img/avatars/isaac.png', t:'「如果能見到他最後一次……我想知道他是否還活著。」' },
+    { n:'系統', a:'', t:'取得道具：記憶之核', act:()=>{ inv.push('記憶之核'); invList.textContent = inv.join('、'); } },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「準備好了就跟我來吧。」（將前往：記憶之核·回收任務）', end:'mission_core.html' }
+  ],
+  leave: [
+    { n:'迪恩', a:'img/avatars/dean.png', t:'「現在撤離並不是失敗，是為了更好的回來。」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「道路自會等待你們。帶著清醒離開，也是勇氣。」', end:'map_world.html' }
+  ],
+  search: [
+    { n:'海瑟', a:'img/avatars/heather.png', t:'「我聽見小小的腳印聲……在柱廊後面！」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「跟著銀光走，別回頭。」' },
+    { n:'系統', a:'', t:'目標更新：搜尋失蹤孩子（區域：北側側廊）', end:'mission_search.html' }
+  ]
+};
+
+let idx=0, active=script;
+
+function render(line){
+  if(!line) return;
+  $name.textContent = line.n || ' ';
+  $text.textContent = line.t || ' ';
+  $avatar.style.backgroundImage = line.a ? `url(${line.a})` : 'none';
+
+  // 文字更新後重算選項位置
+  requestAnimationFrame(placeChoices);
+
+  if(line.choice){ showChoices(line.choice); } else { $choices.style.display='none'; }
+
+  if(typeof line.act === 'function'){ line.act(); }
+
+  if(line.end){
+    $next.textContent='前往任務 ▷';
+    $next.onclick=()=>fadeTo(line.end);
+  }else{
+    $next.textContent='下一句 ▷';
+    $next.onclick=next;
+  }
+}
+
+function next(){ idx++; if(idx>=active.length){ idx=active.length-1; return; } render(active[idx]); }
+
+function showChoices(list){
+  $choices.innerHTML='';
+  list.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='choice'; div.textContent=c.label;
+    div.onclick=()=>{
+      active = branches[c.goto] || active;
+      idx = -1;
+      $choices.style.display='none';
+      next();
+    };
+    $choices.appendChild(div);
+  });
+  $choices.style.display='flex';
+  placeChoices();
+}
+
+/* 自動播放 / 跳過 / 轉場 */
+$autoBtn.onclick=()=>{
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; $autoBtn.textContent='自動播放'; return; }
+  $autoBtn.textContent='自動中…';
+  autoTimer=setInterval(()=>{
+    if($choices.style.display==='flex') return;
+    next();
+    if(idx===active.length-1 && !active[idx].end){ clearInterval(autoTimer); $autoBtn.textContent='自動播放'; }
+  },2600);
+};
+$skip.onclick=()=>{ idx=active.length-1; render(active[idx]); };
+function fadeTo(url){ document.body.style.transition='800ms ease'; document.body.style.opacity='0'; setTimeout(()=>location.href=url,820); }
+
+/* ===== 初始化：先尺寸→粒子→動畫→渲染對話 ===== */
+resize();
+initParticles();
+animate();
+render(active[0]);
+placeChoices();
+</script>
+</body>
+</html>

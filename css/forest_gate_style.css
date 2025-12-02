@@ -1,0 +1,269 @@
+/* === 🌲 穆高爾森林之門 STYLE === */
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: "Noto Sans TC", sans-serif;
+  color: #fff;
+}
+
+/* === 🎥 背景圖層 === */
+#bgContainer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+.scene-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity 2s ease, transform 6s ease;
+}
+.scene-bg.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* === 🌀 門光暈特效 === */
+.fx-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(90,250,255,0.25), transparent 70%);
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+  pointer-events: none;
+  z-index: 5;
+}
+.fx-glow.active {
+  opacity: 1;
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0% { opacity: 0.4; transform: scale(1);}
+  50% { opacity: 0.8; transform: scale(1.03);}
+  100% { opacity: 0.4; transform: scale(1);}
+}
+
+/* === 🚪 門圖片 === */
+#bgGate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 3s ease, opacity 3s ease;
+}
+#bgGate.open {
+  transform: scale(1.08) rotateX(5deg);
+  opacity: 0.7;
+  filter: brightness(1.2);
+}
+
+/* === 🌫️ Canvas霧氣層 === */
+#fogLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+}
+
+/* === 🍃 飄葉層（前景） === */
+#leafLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+}
+.leaf {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background: url('../img/forest_gate/forest_leaves.png') no-repeat center / contain;
+  opacity: 0.8;
+  animation: leafFloat 12s linear infinite;
+}
+@keyframes leafFloat {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 0;}
+  20% { opacity: 1;}
+  100% { transform: translateY(120vh) rotate(360deg); opacity: 0;}
+}
+
+/* === 💬 對話框 === */
+#dialogueBox {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(15, 25, 50, 0.8);
+  color: #eef;
+  z-index: 20;
+  padding: 18px 22px 40px 22px;
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+#dialogueCharacter {
+  font-weight: bold;
+  font-size: 17px;
+  color: #ffd;
+  margin-bottom: 5px;
+}
+#dialogueText {
+  font-size: 15.5px;
+  margin-right: 120px;
+  line-height: 1.6;
+}
+
+/* 下一句按鈕 */
+#nextBtn {
+  position: absolute;
+  right: 200px;
+  bottom: 20px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  line-height: 1.3;
+  transition: all 0.25s ease;
+}
+#nextBtn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-1px);
+}
+
+/* === 📜 任務框 === */
+#questBox {
+  position: absolute;
+  right: 20px;
+  bottom: 80px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  backdrop-filter: blur(8px);
+  color: #fff;
+  z-index: 25;
+  box-shadow: 0 0 12px rgba(100,150,255,0.3);
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.5s ease;
+}
+#questBox.active {
+  opacity: 1;
+  transform: scale(1);
+}
+#questBox h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #ffe28a;
+}
+#questBox ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+}
+
+/* === 📜 任務按鈕 === */
+#toggleQuest {
+  position: absolute;
+  right: 30px;
+  bottom: 20px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 26;
+  transition: all 0.3s ease;
+}
+#toggleQuest:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+/* === 🔘 開門按鈕 === */
+#openGateBtn {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+  padding: 10px 26px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  z-index: 30;
+  transition: all 0.3s ease;
+}
+#openGateBtn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: translateX(-50%) translateY(-3px);
+  box-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+
+/* === ⛓️ UI 導覽列 === */
+.topbar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(60,80,120,0.35);
+  border-radius: 12px;
+  padding: 6px 12px;
+  backdrop-filter: blur(8px);
+  z-index: 40;
+}
+.chip {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s;
+}
+.chip:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+/* === ✨ HUD（右上角） === */
+#hud {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 40;
+}
+.attr {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  font-size: 15px;
+  color: #fff;
+}
+.attr b {
+  margin-left: 5px;
+  color: #9cf;
+}

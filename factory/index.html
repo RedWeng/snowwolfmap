@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Snow Wolf Content Factory v3 · Arcane Tech Lab</title>
+  <link rel="stylesheet" href="factory.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+<div class="swc-bg"></div>
+
+<div class="swc-app">
+  <!-- 頂部標題區 -->
+  <header class="swc-header">
+    <div class="logo-mark">❄️</div>
+    <div class="header-text">
+      <h1>Snow Wolf Content Factory</h1>
+      <p>時空魔導室 · Arcane Tech Content Lab</p>
+    </div>
+    <div class="header-status">
+      <span class="status-dot"></span>
+      <span>系統連線正常</span>
+    </div>
+  </header>
+
+  <!-- 主內容三欄 -->
+  <main class="swc-main">
+    <!-- 左：魔法引擎控制台 -->
+    <section class="panel panel-left">
+      <div class="panel-title">
+        <span class="panel-icon">⚙️</span>
+        <span>魔法引擎控制台</span>
+      </div>
+
+      <div class="field">
+        <label for="promptInput">你的指令 · Command Spell</label>
+        <div class="field-sub">例如：請幫我整理里特的性格與內在矛盾。</div>
+        <input id="promptInput"
+               type="text"
+               maxlength="500"
+               placeholder="輸入你想問 GPT / Gemini 的下一句話……">
+      </div>
+
+      <div class="field">
+        <label for="engine">AI 引擎 · Core Engine</label>
+        <select id="engine">
+          <option value="gpt">❄ GPT · 雪脈中樞</option>
+          <option value="gemini">✨ Gemini · 星辰矩陣</option>
+          <option value="both">🌀 雙引擎 · Arcane Fusion</option>
+        </select>
+      </div>
+
+      <div class="field field-row">
+        <button id="runBtn" class="primary-btn">
+          <span class="btn-glow"></span>
+          <span>啟動魔導儀式 · Send</span>
+        </button>
+      </div>
+
+      <div class="tips">
+        <div class="tips-title">小提示 · Ritual Notes</div>
+        <ul>
+          <li>這裡就當作「聊天室」：每次輸入一句話按 Send，即是下一輪對話。</li>
+          <li>可以請它幫你拆解角色、補完世界觀，或設計分鏡指令。</li>
+          <li>選擇「雙引擎」時，GPT 與 Gemini 會同時回覆，你可以比較兩種思路。</li>
+        </ul>
+      </div>
+
+      <h3 class="upload-title">📘 餵入故事（Season Upload）</h3>
+      <textarea id="seasonInput" class="season-input"
+                placeholder="貼上你的劇本、章節、世界觀設定…"></textarea>
+      <button id="feedBtn" class="feed-btn">📡 導入故事資料庫</button>
+      <div id="feedStatus" class="feed-status">尚未導入任何文本</div>
+    </section>
+
+    <!-- 中：Arcane Chat Room -->
+    <section class="panel panel-center">
+      <div class="panel-title">
+        <span class="panel-icon">🔮</span>
+        <span>雪狼對話矩陣 · Arcane Chat Room</span>
+      </div>
+
+      <div class="chat-shell">
+        <div class="chat-header">
+          <span id="chatModeLabel">多輪對話已啟用 · 你 / GPT / Gemini 三方協作</span>
+          <button id="clearChatBtn" class="secondary-btn">清空對話</button>
+        </div>
+
+        <div id="chatWindow" class="chat-window">
+          <div class="chat-empty">
+            在這裡會顯示你與 GPT / Gemini 的對話。<br>
+            建議先在左側餵入部分「雪狼男孩」故事，再開始討論劇情、角色或分鏡。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：系統狀態 / 歷史紀錄 -->
+    <section class="panel panel-right">
+      <div class="panel-title">
+        <span class="panel-icon">📡</span>
+        <span>系統狀態 · System Monitor</span>
+      </div>
+
+      <div class="system-block">
+        <div class="system-row">
+          <span class="label">連線狀態</span>
+          <span class="value">Online</span>
+        </div>
+        <div class="system-row">
+          <span class="label">當前模式</span>
+          <span class="value" id="modeLabel">待命</span>
+        </div>
+        <div class="system-row">
+          <span class="label">版本</span>
+          <span class="value">v3.0 Arcane Chat</span>
+        </div>
+      </div>
+
+      <div class="panel-subtitle">
+        <span class="panel-icon small">📜</span>
+        <span>歷史紀錄 · Summon Log（簡易示意）</span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-item disabled">
+          <div class="history-title">尚無紀錄</div>
+          <div class="history-meta">開始聊幾輪之後，這裡會出現你的召喚紀錄。</div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="factory.js"></script>
+</body>
+</html>

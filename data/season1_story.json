@@ -1,0 +1,33 @@
+{
+  "snow_temple": {
+    "dialogues": [
+      {"n": "艾薩克", "a": "isaac.png", "t": "這裡的能量……跟我記憶裡的聲音一樣。"},
+      {"n": "迪恩", "a": "dean.png", "t": "別亂碰。任何一點波動，都可能觸發防護機制。"},
+      {"n": "海瑟", "a": "heather.png", "t": "看那顆核心！像在呼吸……"},
+      {"n": "艾琳", "a": "erinn.png", "t": "這裡的氣息……不像單純的冰，而是記憶的殘響。"},
+      {"n": "系統", "a": "system_core.png", "t": "請選擇前進路徑：", "choice": [
+        {"label": "進入核心", "goto": "memory_core"},
+        {"label": "離開聖殿", "goto": "temple_exit"},
+        {"label": "尋找失蹤孩子", "goto": "search_child"}
+      ]}
+    ]
+  },
+  "memory_core": {
+    "dialogues": [
+      {"n": "系統", "a": "system_core.png", "t": "核心能量啟動。"},
+      {"n": "艾薩克", "a": "isaac.png", "t": "我看到了……父親的影子！", "end": "mission_core.html"}
+    ]
+  },
+  "temple_exit": {
+    "dialogues": [
+      {"n": "海瑟", "a": "heather.png", "t": "我們不能就這樣離開。"},
+      {"n": "艾琳", "a": "erinn.png", "t": "雪還在下，路會被掩埋……", "end": "mission_forest_path.html"}
+    ]
+  },
+  "search_child": {
+    "dialogues": [
+      {"n": "迪恩", "a": "dean.png", "t": "孩子可能往北邊去了。"},
+      {"n": "艾薩克", "a": "isaac.png", "t": "我聽到哭聲！", "end": "mission_search.html"}
+    ]
+  }
+}

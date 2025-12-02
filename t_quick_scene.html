@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>雪狼男孩｜雪森林戰鬥基地</title>
+<style>
+:root{
+  --c1:#8bd3ff;--c2:#4fd5ff;--text:#e7f1ff;--sub:#b9d2ea;--blur:8px;
+}
+html,body{margin:0;height:100%;overflow:hidden;background:#000;
+  font-family:"Noto Sans TC",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+#poster{position:absolute;inset:0;background:url("img/scene_poster.jpg") center/cover no-repeat;z-index:0;opacity:1;transition:.6s}
+#bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.86) contrast(1.08);z-index:0;opacity:0;transition:.6s}
+canvas#particles,canvas#snow{position:absolute;inset:0;z-index:1;pointer-events:none}
+.topbar{position:absolute;top:22px;left:50%;transform:translateX(-50%);z-index:5;color:var(--text);letter-spacing:.18em;text-shadow:0 0 24px #0009}
+.hud{position:absolute;right:16px;top:16px;z-index:6;display:flex;gap:10px}
+.btn{background:linear-gradient(90deg,#1e6aff,var(--c2));color:#fff;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;box-shadow:0 0 16px #4fb4ff66;transition:.2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 22px #8bd3ffaa}
+.btn.secondary{background:#0b1630cc;border:1px solid #8bd3ff55;box-shadow:none;color:#cfe9ff}
+.dialog{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);width:min(980px,92vw);z-index:5;
+  display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:end;backdrop-filter:blur(var(--blur));
+  background:linear-gradient(180deg,#0a1222aa,#03060c99);border:1px solid #6fbaf833;border-radius:16px;padding:14px 16px;
+  box-shadow:0 0 36px #061427aa,inset 0 0 0 1px #8bd3ff22}
+.avatar{width:96px;height:96px;border-radius:12px;background:#0a1222 center/contain no-repeat;border:1px solid #8bd3ff55;box-shadow:0 0 24px #2ec7ff33}
+.name{color:#cfe9ff;font-weight:800;letter-spacing:.12em;margin-bottom:6px}
+.content{color:var(--sub);font-size:1.06rem;line-height:1.6}
+.ctl{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+.choices{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(40px + 180px);display:none;z-index:8;gap:12px;flex-direction:column;width:min(760px,92vw)}
+.choice{background:#0a1222cc;border:1px solid #8bd3ff55;border-radius:12px;padding:14px 16px;color:#d7eaff;cursor:pointer;transition:.18s;backdrop-filter:blur(6px)}
+.choice:hover{border-color:#a3e4ff;box-shadow:0 0 18px #3ec7ff55;transform:translateY(-2px)}
+@media (max-width:900px){.choices{bottom:calc(40px + 220px)}}
+.footer{position:absolute;bottom:12px;width:100%;text-align:center;color:#89a7c4;font-size:.85rem;z-index:4}
+</style>
+</head>
+<body>
+
+<div id="poster"></div>
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="video/scene_bg.mp4" type="video/mp4"/>
+</video>
+
+<canvas id="particles"></canvas>
+<canvas id="snow"></canvas>
+
+<div class="topbar" id="chapter">CHAPTER — 雪森林戰鬥基地</div>
+
+<div class="hud">
+  <button class="btn secondary" id="btnBgm">BGM：開</button>
+  <button class="btn secondary" id="btnSkip">跳過</button>
+</div>
+
+<div class="choices" id="choices"></div>
+
+<div class="dialog" id="dialog">
+  <div class="avatar" id="avatar"></div>
+  <div>
+    <div class="name" id="name">—</div>
+    <div class="content" id="text">…</div>
+    <div class="ctl"><button class="btn" id="btnNext">下一句 ▷ (Space)</button></div>
+  </div>
+</div>
+
+<div class="footer">© SNOW WOLF PROJECT</div>
+
+<script>
+// ===== 背景影片與海報 =====
+const video=document.getElementById('bgVideo'),poster=document.getElementById('poster');
+video.addEventListener('loadeddata',()=>{video.style.opacity=1;poster.style.opacity=0;});
+video.addEventListener('error',()=>{poster.style.opacity=1;});
+
+// ===== 音樂 =====
+const bgm=new Audio('audio/scene_bgm.mp3'); bgm.loop=true; bgm.volume=0.6;
+document.addEventListener('pointerdown',()=>bgm.play().catch(()=>{}),{once:true});
+document.getElementById('btnBgm').onclick=()=>{ if(bgm.paused){bgm.play();}else{bgm.pause();} };
+
+// ===== 光粒與飄雪 =====
+const p=document.getElementById('particles'),s=document.getElementById('snow');
+const pctx=p.getContext('2d'),sctx=s.getContext('2d');let W,H;
+function rz(){W=p.width=s.width=innerWidth;H=p.height=s.height=innerHeight}addEventListener('resize',rz);rz();
+const pts=Array.from({length:120},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.6,s:Math.random()*0.4+0.2,a:Math.random()*6.28}));
+const flakes=Array.from({length:160},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.8,s:Math.random()*0.7+0.3,w:Math.random()*0.7+0.2}));
+(function loop(){
+  pctx.clearRect(0,0,W,H);pctx.fillStyle='rgba(160,220,255,.7)';
+  pts.forEach(pt=>{pt.a+=.002;pt.y+=pt.s;pt.x+=Math.sin(pt.a)*.2;if(pt.y>H){pt.y=-5;pt.x=Math.random()*W;}
+    pctx.beginPath();pctx.arc(pt.x,pt.y,pt.r,0,Math.PI*2);pctx.fill();});
+  sctx.clearRect(0,0,W,H);sctx.fillStyle='rgba(255,255,255,.92)';
+  flakes.forEach(f=>{f.y+=f.s;f.x+=Math.sin((f.y+f.x)*.003)*f.w;if(f.y>H+6){f.y=-6;f.x=Math.random()*W;}
+    sctx.beginPath();sctx.arc(f.x,f.y,f.r,0,Math.PI*2);sctx.fill();});
+  requestAnimationFrame(loop);
+})();
+
+// ===== 對話系統 =====
+const $name=document.getElementById('name'),$text=document.getElementById('text'),$avatar=document.getElementById('avatar');
+const $next=document.getElementById('btnNext'),$choices=document.getElementById('choices');
+
+const script=[
+  {n:'系統核心・AURELIA',a:'img/avatars/core_ai.png',t:'「頻段對齊完成。歡迎回到雪森林戰鬥基地。」'},
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「這裡的氣壓比昨天低了些……你感覺到嗎？」'},
+  {n:'迪恩',a:'img/avatars/dean.png',t:'「天氣預報沒這麼快變。可能是北側能源塔又出問題。」'},
+  {n:'艾薩克',a:'img/avatars/isaac.png',t:'「那我們要不要去確認？昨晚的警示燈閃了兩次。」'},
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「別急，等系統核心給指令吧。」'},
+  {n:'系統核心・AURELIA',a:'img/avatars/core_ai.png',t:'「基地外部監測：發現未知生物反應。建議封鎖南門並派出偵察隊。」'},
+  {n:'迪恩',a:'img/avatars/dean.png',t:'「又是那些傳說中的雪狼？還是流浪者？」'},
+  {n:'艾薩克',a:'img/avatars/isaac.png',t:'「雪狼不會主動靠近基地……除非，牠們在保護什麼。」'},
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「那就只能親自去看看了。」'},
+  {n:'系統核心・AURELIA',a:'img/avatars/core_ai.png',t:'「任務選項啟動：請選擇行動方向。」',
+   choice:[
+     {label:'前往北側樹海（探索）',go:'north'},
+     {label:'進入內部工坊（換裝／補給）',go:'lab'}
+   ]}
+];
+
+const branches={
+  north:[
+    {n:'系統',t:'目標更新：前往北側樹海。請攜帶追蹤裝置。',end:'mission_north_forest.html'}
+  ],
+  lab:[
+    {n:'系統',t:'已進入工坊：可更換造型與裝備。',end:'supply_lab.html'}
+  ]
+};
+
+let idx=0,active=script;
+function render(line){
+  if(!line)return;
+  $name.textContent=line.n||' ';$text.textContent=line.t||' ';
+  $avatar.style.backgroundImage=line.a?`url(${line.a})`:'none';
+  if(line.choice){showChoices(line.choice);}else{$choices.style.display='none';}
+  $next.onclick=()=>next(line);
+}
+function next(line){
+  if(line && line.end){fadeTo(line.end);return;}
+  idx++;if(idx>=active.length){idx=active.length-1;return;}render(active[idx]);
+}
+function showChoices(list){
+  $choices.innerHTML='';
+  list.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='choice';div.textContent=c.label;
+    div.onclick=()=>{active=branches[c.go]||active;idx=0;$choices.style.display='none';render(active[0]);};
+    $choices.appendChild(div);
+  });
+  $choices.style.display='flex';
+}
+document.getElementById('btnSkip').onclick=()=>{const last=script[script.length-1];if(last.choice){showChoices(last.choice);}else{idx=script.length-1;render(script[idx]);}};
+function fadeTo(url){document.body.style.transition='800ms ease';document.body.style.opacity='0';setTimeout(()=>location.href=url,820);}
+render(active[0]);
+
+// 快捷鍵
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();next(active[idx]);}
+  if($choices.style.display==='flex'){
+    if(e.key==='1')$choices.children[0]?.click();
+    if(e.key==='2')$choices.children[1]?.click();
+  }
+});
+</script>
+</body>
+</html>

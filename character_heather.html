@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>雪狼男孩｜海瑟 HEATHER — 通訊面板</title>
+<style>
+:root{
+  --ink:#e8f2ff; --muted:#9db3c9; --accent:#8bd3ff; --edge:#1e2b3d;
+  --glow:0 0 0 1px rgba(139,211,255,.25), 0 10px 24px rgba(0,0,0,.45);
+  --hero-safe-top:24px; /* 上緣安全距，避免頂到框線 */
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{
+  margin:0; color:var(--ink); font-family:ui-sans-serif,system-ui,"Noto Sans TC",Arial;
+  background:#0b1018;
+}
+#sceneWrap{position:fixed; inset:0; z-index:-2}
+#sceneBG{position:absolute; inset:0; background:#08121e center/cover no-repeat; filter:brightness(.9)}
+#snow{position:absolute; inset:0; pointer-events:none}
+
+/* 版面與卡片 */
+.app{display:grid; grid-template-columns:560px 1fr; gap:24px; padding:24px; min-height:100%}
+.card{background:linear-gradient(180deg,rgba(14,21,33,.76),rgba(10,16,25,.72)); border:1px solid var(--edge); border-radius:16px; box-shadow:var(--glow); backdrop-filter:blur(8px)}
+.left{display:grid; grid-template-rows:auto auto auto 1fr auto; gap:16px; padding:16px}
+.section{border:1px solid #1a2638; border-radius:12px; padding:12px; background:linear-gradient(180deg,rgba(8,12,20,.6),rgba(12,18,28,.5))}
+.hdr{display:flex; align-items:center; justify-content:space-between; font-weight:700; letter-spacing:.5px}
+.badge{font-size:.8rem; color:#cfe6ff; border:1px solid #274055; border-radius:20px; padding:4px 8px; background:#0f1a27}
+.p{color:var(--muted); line-height:1.55}
+.quote{border-left:3px solid var(--accent); padding:8px 10px; background:rgba(139,211,255,.06); border-radius:6px; margin:8px 0}
+.kpi{display:flex; gap:6px; align-items:center}
+.bar{height:8px; background:#0b1220; border:1px solid #1b2a3d; border-radius:6px; overflow:hidden}
+.bar>i{display:block; height:100%; width:0; background:linear-gradient(90deg,#60c6ff,#a3ecff)}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.btn{background:#122033; border:1px solid #1f3248; color:#d7ebff; padding:10px 12px; border-radius:10px; cursor:pointer; transition:.18s}
+.btn:hover{transform:translateY(-1px); border-color:#2b5673}
+.btn.ghost{background:transparent}
+.kbd{user-select:none; font-size:.8rem; padding:2px 6px; border:1px solid #2a3b50; border-radius:6px; background:#0c141e; color:#bcd2eb}
+.small{font-size:.9rem; color:#94a9bf}
+.sep{height:1px; background:linear-gradient(90deg,transparent,#233449,transparent); margin:10px 0}
+
+/* 雷達 */
+.radarWrap{background:#0f1724; border:1px solid #1a2940; border-radius:10px; padding:10px}
+canvas.radar{width:100%; height:260px; display:block}
+
+/* 場景切換 */
+.sceneRow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.sceneDot{width:12px; height:12px; border-radius:50%; border:1px solid #2a3b50; background:#0c141e; cursor:pointer}
+.sceneDot[aria-current="true"]{background:#8bd3ff; border-color:#8bd3ff}
+.sceneName{font-weight:700}
+
+/* 道具 */
+.inv{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px}
+.slot{
+  position:relative; overflow:hidden;
+  border:1px solid #1a2940; border-radius:10px;
+  background:linear-gradient(180deg,#0b1220,#0a141f); padding:8px; min-height:78px;
+  cursor:pointer; transition:.18s;
+}
+.slot:hover{transform:translateY(-1px); border-color:#2b5673}
+.slot img{width:36px; height:36px; object-fit:contain; display:block; opacity:.75; filter:grayscale(.6)}
+.slot .cap{margin-top:6px; font-size:.85rem; color:#8ea6bf; line-height:1.2}
+.slot.owned{box-shadow:0 0 0 1px inset rgba(139,211,255,.5), 0 0 18px rgba(139,211,255,.18)}
+.slot.owned img{opacity:1; filter:none}
+.slot.owned .cap{color:#e2f1ff}
+.tip{position:absolute; right:8px; top:8px; font-size:.7rem; color:#9bcdf0; opacity:.9}
+
+/* 點擊特效：發光＋旋轉 + 能量環 */
+@keyframes pulseGlow { 0%{box-shadow:0 0 0 0 rgba(139,211,255,.55)} 70%{box-shadow:0 0 22px 6px rgba(139,211,255,.28)} 100%{box-shadow:0 0 0 0 rgba(139,211,255,0)} }
+@keyframes spinZoom { 0%{transform:scale(1) rotate(0)} 40%{transform:scale(1.18) rotate(180deg)} 100%{transform:scale(1) rotate(360deg)} }
+@keyframes ringPulse { 0%{opacity:.0; transform:scale(.7)} 30%{opacity:.9} 100%{opacity:0; transform:scale(1.35)} }
+.slot.active{animation:pulseGlow 1.2s ease-out}
+.slot.active img{animation:spinZoom 0.9s ease-out}
+.slot.active::after{
+  content:""; position:absolute; inset:4px; border-radius:10px;
+  border:1px solid rgba(139,211,255,.75); animation:ringPulse .9s ease-out forwards; pointer-events:none;
+}
+.slot.owned.active{animation:pulseGlow 1.6s ease-out}
+.slot.owned.active::after{border-color:rgba(139,211,255,.95)}
+
+/* 右側大圖（更滿版但保留上緣安全距） */
+.right{position:relative; overflow:hidden}
+.hero{
+  position:absolute; left:0; right:0; bottom:8px; top:var(--hero-safe-top);
+  background:radial-gradient(900px 480px at 72% 28%, rgba(139,211,255,.18), transparent 55%);
+}
+.hero img{
+  position:absolute; right:2%; bottom:0;
+  height:calc(100% - 8px); /* 直接吃滿可用高度，不再只用 max-height */
+  width:auto;
+  filter:drop-shadow(0 24px 40px rgba(0,0,0,.45));
+  opacity:0; transform:translateY(10px); transition:.4s ease;
+}
+.hero img.show{opacity:1; transform:translateY(0)}
+
+/* Modal — 道具說明視窗 */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(7,12,20,.6); backdrop-filter:blur(2px);
+  display:none; align-items:center; justify-content:center; z-index:60;
+}
+.modal-backdrop.show{display:flex}
+.modal{
+  width:min(520px, calc(100vw - 40px));
+  background:linear-gradient(180deg,rgba(14,21,33,.98),rgba(10,16,25,.98));
+  border:1px solid #2c4f6a; border-radius:16px; color:#d7ebff; box-shadow:0 14px 48px rgba(0,0,0,.5);
+}
+.modal-h{
+  display:flex; align-items:center; justify-content:space-between; padding:14px 16px;
+  border-bottom:1px solid #254058; font-weight:700;
+}
+.modal-b{padding:16px; display:flex; gap:14px; align-items:flex-start}
+.modal-b img{width:48px; height:48px; object-fit:contain}
+.modal-f{display:flex; justify-content:flex-end; gap:10px; padding:12px 16px; border-top:1px solid #254058}
+.xbtn{background:#122033; border:1px solid #2a4561; color:#cfe6ff; padding:8px 10px; border-radius:10px; cursor:pointer}
+.xbtn.primary{border-color:#3f6f92}
+
+/* Footer */
+.footer{display:flex; gap:12px; justify-content:space-between; align-items:center}
+.btnrow{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.link{color:#bde6ff; text-decoration:none; border-bottom:1px dotted #3d6c86}
+</style>
+</head>
+<body>
+
+<!-- 場景 + 飄雪 -->
+<div id="sceneWrap">
+  <div id="sceneBG"></div>
+  <canvas id="snow"></canvas>
+</div>
+
+<div class="app">
+  <!-- LEFT -->
+  <div class="card left" role="region" aria-label="海瑟 — 通訊/狀態">
+    <div class="section">
+      <div class="hdr">
+        <div style="display:flex;align-items:center;gap:10px">
+          <img id="avatar" src="img/characters/heather_portrait.png" alt="海瑟頭像"
+               style="width:32px;height:32px;border-radius:8px;object-fit:cover;border:1px solid #1e2b3d;background:#0e1622">
+          <div>海瑟 HEATHER｜偵查 / 支援</div>
+        </div>
+        <span class="badge">FOR THIS OP</span>
+      </div>
+      <div class="quote">「我不會再馬馬虎虎了。就算要我換位…我也想照顧到每一位。」</div>
+      <div class="grid2">
+        <div class="p">狀態：OK<br>心境：還是覺得緊繃</div>
+        <div class="kpi"><span class="small" style="width:64px">HP</span><div class="bar" style="flex:1"><i id="hp"></i></div></div>
+      </div>
+      <div class="kpi" style="margin-top:8px"><span class="small" style="width:64px">STRESS</span><div class="bar" style="flex:1"><i id="stress"></i></div></div>
+    </div>
+
+    <div class="section">
+      <div class="hdr">THREAT MONITOR <span class="small">海瑟・偵查｜支援</span></div>
+      <div class="radarWrap"><canvas id="radar" class="radar" width="480" height="260" aria-label="勇氣 觀察 耐力 智慧 連結"></canvas></div>
+      <div class="sep"></div>
+      <div class="sceneRow">
+        <span class="small">場景：</span><span id="sceneName" class="sceneName">森林</span>
+        <div style="flex:1"></div><div id="sceneDots" class="sceneRow" style="gap:6px"></div>
+      </div>
+      <div class="small" style="margin-top:6px">切換：<span class="kbd">A</span>/<span class="kbd">D</span> 或點圓點</div>
+      <div class="sep"></div>
+      <div class="grid2">
+        <button class="btn" id="btnVoice">播放語音 <span class="kbd">Space</span></button>
+        <button class="btn ghost" id="btnBg">BGM OFF / ON</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="hdr">LOADOUT / 裝備 <span class="badge">PSYCH / RISK</span></div>
+      <div class="p">AI 評估：能執行偵查，但壓力接近紅區；建議全程配對掩護與低噪動作。</div>
+      <div class="grid2">
+        <button class="btn">遠程索查</button><button class="btn">低干擾潛行</button>
+        <button class="btn">夜間視覺</button><button class="btn">符文感知</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="hdr">持有道具 <span class="badge">連動：首頁</span></div>
+      <div id="inv" class="inv"></div>
+      <div class="small" style="margin-top:6px">已持有會高亮（讀取 <code>localStorage.SW_INV</code>）。</div>
+    </div>
+
+    <div class="footer">
+      <div class="btnrow">
+        <a class="link" href="mission_brief.html">← 任務簡報</a>
+        <a class="link" href="combat_fullscreen.html">→ 戰術演算</a>
+        <a class="link" href="encyclopedia.html">百科</a>
+      </div>
+      <div class="small">© Snow Wolf S1｜Character Page</div>
+    </div>
+  </div>
+
+  <!-- RIGHT HERO -->
+  <div class="card right" style="padding:0; position:relative;">
+    <div class="hero"><img id="full" src="img/characters_full/heather_full.png" alt="海瑟 全身圖"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modalWrap" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mdlTitle">
+    <div class="modal-h">
+      <div id="mdlTitle">道具資訊</div>
+      <button class="xbtn" id="mdlClose" aria-label="關閉">✕</button>
+    </div>
+    <div class="modal-b">
+      <img id="mdlIcon" alt="">
+      <div>
+        <div id="mdlName" style="font-weight:700; color:#aee3ff; margin-bottom:6px"></div>
+        <div id="mdlDesc" class="p"></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="xbtn" id="mdlCancel">關閉</button>
+      <button class="xbtn primary" id="mdlOk">了解</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========= 內建佔位圖 ========= */
+const PLACEHOLDER='data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="100%" height="100%" fill="#0b1220"/><rect x="1" y="1" width="318" height="318" fill="none" stroke="#335a75"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#8bd3ff">MISSING</text></svg>`);
+function safeImage(el){ el.onerror=()=>{ el.onerror=null; el.src=PLACEHOLDER; el.style.border="1px solid #ff4444"; }; }
+
+/* ========= 角色數值 ========= */
+const CHAR={ hp:92, stress:63, stats:{courage:72,observe:86,stamina:60,wisdom:68,bond:78}, voiceLine:'audio/voice_heather_line.mp3' };
+document.getElementById('hp').style.width=CHAR.hp+'%';
+document.getElementById('stress').style.width=CHAR.stress+'%';
+
+/* ========= 場景 ========= */
+const SCENES=[
+  {id:'forest', zh:'森林', bg:'img/game/bg_forest_dusk.jpg', bgm:'audio/bgm_forest_01.mp3'},
+  {id:'school', zh:'學校', bg:'img/game/bg_school.jpg',      bgm:'audio/bgm_brief_01.mp3'},
+  {id:'lake',   zh:'湖泊', bg:'img/game/bg_lake_night.jpg',  bgm:'audio/bgm_lake_01.mp3'},
+  {id:'altar',  zh:'石墩', bg:'img/game/bg_altar.jpg',       bgm:'audio/bgm_altar_01.mp3'},
+];
+let sceneIdx=0; const sceneBG=document.getElementById('sceneBG'); const sceneName=document.getElementById('sceneName'); const sceneDots=document.getElementById('sceneDots');
+
+/* ========= 飄雪 ========= */
+const snow=document.getElementById('snow'), sctx=snow.getContext('2d'); let flakes=[];
+function resizeSnow(){ snow.width=window.innerWidth; snow.height=window.innerHeight; }
+function makeFlakes(n=160){ flakes=Array.from({length:n},()=>({x:Math.random()*snow.width,y:Math.random()*snow.height,r:Math.random()*2+0.6,s:Math.random()*0.6+0.2,w:Math.random()*0.8+0.2})); }
+function tickSnow(){ sctx.clearRect(0,0,snow.width,snow.height); sctx.fillStyle='rgba(255,255,255,.85)'; flakes.forEach(f=>{ f.y+=f.s; f.x+=Math.sin((f.y+f.x)*0.003)*f.w; if(f.y>snow.height+10){f.y=-10; f.x=Math.random()*snow.width;} sctx.beginPath(); sctx.arc(f.x,f.y,f.r,0,Math.PI*2); sctx.fill();}); requestAnimationFrame(tickSnow); }
+
+/* ========= 場景切換 & BGM ========= */
+let bgm; function ensureBgm(src){ if(!bgm){ bgm=new Audio(src); bgm.loop=true; bgm.volume=.52; } bgm.src=src; return bgm; }
+function renderSceneDots(){ sceneDots.innerHTML=''; SCENES.forEach((s,i)=>{ const d=document.createElement('div'); d.className='sceneDot'; if(i===sceneIdx) d.setAttribute('aria-current','true'); d.title=s.zh; d.addEventListener('click',()=>setScene(i)); sceneDots.appendChild(d); });}
+function setScene(i){ sceneIdx=(i+SCENES.length)%SCENES.length; const s=SCENES[sceneIdx]; sceneBG.style.backgroundImage=`url('${s.bg}')`; sceneName.textContent=s.zh; renderSceneDots(); ensureBgm(s.bgm).play().catch(()=>{}); }
+document.getElementById('btnBg').addEventListener('click',()=>{ if(!bgm){ensureBgm(SCENES[sceneIdx].bgm).play().catch(()=>{});return;} if(bgm.paused) bgm.play().catch(()=>{}); else bgm.pause();});
+window.addEventListener('keydown',(e)=>{ if(e.key==='a'||e.key==='A') setScene(sceneIdx-1); if(e.key==='d'||e.key==='D') setScene(sceneIdx+1); });
+
+/* ========= 語音 ========= */
+let voice; function playVoice(src){ try{ if(voice){voice.pause(); voice.currentTime=0;} }catch(e){} voice=new Audio(src); voice.volume=1; voice.play().catch(()=>{}); }
+document.getElementById('btnVoice').addEventListener('click',()=>playVoice(CHAR.voiceLine));
+window.addEventListener('keydown',(e)=>{ if(e.code==='Space'){ e.preventDefault(); playVoice(CHAR.voiceLine);} });
+
+/* ========= 雷達 ========= */
+function drawRadarSmooth(){
+  const cvs=document.getElementById('radar'); const ctx=cvs.getContext('2d'); if(!ctx) return;
+  const axes=[{k:'courage',l:'勇氣'},{k:'observe',l:'觀察'},{k:'stamina',l:'耐力'},{k:'wisdom',l:'智慧'},{k:'bond',l:'連結'}];
+  const w=cvs.width, h=cvs.height, cx=w/2, cy=h/2, minR=28, maxR=Math.min(w,h)*0.36;
+  let cur={courage:20,observe:20,stamina:20,wisdom:20,bond:20}, to=CHAR.stats;
+  function draw(v){
+    ctx.clearRect(0,0,w,h); ctx.save(); ctx.translate(cx,cy);
+    ctx.strokeStyle='rgba(139,211,255,.18)'; ctx.lineWidth=1;
+    for(let s=1;s<=4;s++){ const r=minR+(maxR-minR)*(s/4); ctx.beginPath();
+      for(let i=0;i<5;i++){ const a=(Math.PI*2/5)*i-Math.PI/2; const x=Math.cos(a)*r,y=Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); ctx.stroke();}
+    ctx.fillStyle='rgba(207,230,255,.9)'; ctx.font="12px system-ui, 'Noto Sans TC'";
+    axes.forEach((ax,i)=>{ const a=(Math.PI*2/5)*i-Math.PI/2; const x=Math.cos(a)*(maxR+10), y=Math.sin(a)*(maxR+10);
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*maxR,Math.sin(a)*maxR); ctx.strokeStyle='rgba(139,211,255,.22)'; ctx.stroke();
+      ctx.fillText(ax.l,x-12,y+4);
+    });
+    ctx.beginPath();
+    axes.forEach((ax,i)=>{ const p=Math.max(0,Math.min(100,v[ax.k]))/100; const r=minR+(maxR-minR)*p; const a=(Math.PI*2/5)*i-Math.PI/2; const x=Math.cos(a)*r,y=Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.closePath(); ctx.fillStyle='rgba(146,227,255,.22)'; ctx.strokeStyle='rgba(146,227,255,.85)'; ctx.lineWidth=2; ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+  const t0=performance.now(); (function anim(t){ const p=Math.min(1,(t-t0)/650),e=1-Math.pow(1-p,3); let v={}; for(const k in cur){ v[k]=cur[k]+(to[k]-cur[k])*e; } draw(v); if(p<1) requestAnimationFrame(anim); })(t0);
+}
+
+/* ========= 道具 ========= */
+const INV_DEF=[
+  {id:'compass',       name:'方位羅盤',     icon:'img/ui/it_compass.png',   desc:'校準方向，降低迷航風險。'},
+  {id:'rune_scanner',  name:'符文掃描器',   icon:'img/ui/it_scanner.png',   desc:'解析光紋，提升符文解讀成功率。'},
+  {id:'night_goggles', name:'夜視鏡',       icon:'img/ui/it_nv.png',        desc:'增強夜間可視度與偵查範圍。'},
+  {id:'first_aid',     name:'急救包',       icon:'img/ui/it_firstaid.png',  desc:'小幅恢復耐力與心理穩定。'},
+  {id:'rope',          name:'耐寒繩索',     icon:'img/ui/it_rope.png',      desc:'穿越危險地形的必備工具。'},
+  {id:'flare',         name:'信號照明彈',   icon:'img/ui/it_flare.png',     desc:'短時間驅散陰影噪聲並標記位置。'},
+  {id:'decoder',       name:'古紋解碼器',   icon:'img/ui/it_decoder.png',   desc:'直譯古紋語義，啟動隱藏機關。'},
+  {id:'snow_charm',    name:'雪魅護符',     icon:'img/ui/it_charm.png',     desc:'傳說可庇護旅人，降低暴擊傷害。'},
+];
+function getOwned(){ try{ return new Set(JSON.parse(localStorage.getItem('SW_INV')||'[]')); }catch(e){ return new Set(); } }
+const invWrap=document.getElementById('inv');
+
+/* Modal 控制 */
+const modalWrap=document.getElementById('modalWrap');
+const mdlClose=document.getElementById('mdlClose');
+const mdlCancel=document.getElementById('mdlCancel');
+const mdlOk=document.getElementById('mdlOk');
+const mdlIcon=document.getElementById('mdlIcon');
+const mdlName=document.getElementById('mdlName');
+const mdlDesc=document.getElementById('mdlDesc');
+function openModal(item){
+  mdlIcon.src=item.icon; mdlIcon.alt=item.name; safeImage(mdlIcon);
+  mdlName.textContent=item.name; mdlDesc.textContent=item.desc;
+  modalWrap.classList.add('show'); modalWrap.setAttribute('aria-hidden','false');
+}
+function closeModal(){
+  modalWrap.classList.remove('show'); modalWrap.setAttribute('aria-hidden','true');
+}
+[mdlClose, mdlCancel, mdlOk].forEach(b=> b.addEventListener('click', closeModal));
+modalWrap.addEventListener('click', (e)=>{ if(e.target===modalWrap) closeModal(); });
+window.addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeModal(); });
+
+function renderInv(){
+  const owned=getOwned(); invWrap.innerHTML='';
+  INV_DEF.forEach(it=>{
+    const slot=document.createElement('div'); const has=owned.has(it.id);
+    slot.className='slot'+(has?' owned':'');
+    slot.innerHTML=`<span class="tip">${has?'OWNED':'未持有'}</span><img alt="${it.name}"><div class="cap">${it.name}</div>`;
+    const img=slot.querySelector('img'); img.src=it.icon; safeImage(img);
+    slot.title=it.desc;
+    slot.addEventListener('click',()=>{
+      // 發光旋轉
+      slot.classList.remove('active'); void slot.offsetWidth; slot.classList.add('active');
+      setTimeout(()=>slot.classList.remove('active'),1600);
+      // 彈出說明視窗
+      openModal(it);
+    });
+    invWrap.appendChild(slot);
+  });
+}
+
+/* ========= 啟動 ========= */
+window.addEventListener('load',()=>{
+  // 圖片保險
+  const full=document.getElementById('full'); const avatar=document.getElementById('avatar');
+  safeImage(full); safeImage(avatar); full.onload=()=>full.classList.add('show'); if(full.complete) full.classList.add('show');
+
+  // 場景 & 雪
+  setScene(0); renderSceneDots(); resizeSnow(); makeFlakes(180); tickSnow(); window.addEventListener('resize',()=>{ resizeSnow(); makeFlakes(flakes.length); });
+
+  // 雷達
+  drawRadarSmooth();
+
+  // 道具
+  renderInv();
+});
+</script>
+</body>
+</html>

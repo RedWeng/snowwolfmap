@@ -1,0 +1,5 @@
+{
+  "sleep": { "C": 0, "E": 0, "T": 0, "heal": 1, "sfx": "audio/sfx/cloth_rustle.wav" },
+  "store": { "bag_slots": 6, "sfx": "audio/sfx/trunk_open.wav" },
+  "diary": { "unlock": "chapter_note", "sfx": "audio/sfx/page_turn_soft.wav" }
+}

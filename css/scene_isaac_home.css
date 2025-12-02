@@ -1,0 +1,92 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: url('../img/isaac_home/isaac_home_bg.jpg') center/cover no-repeat;
+  font-family: "Noto Sans TC", sans-serif;
+  transition: filter 1s ease;
+}
+#gameContainer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+.interactable {
+  position: absolute;
+  cursor: pointer;
+  transition: transform 0.3s, opacity 0.3s;
+}
+.interactable:hover {
+  transform: scale(1.05);
+  opacity: 0.8;
+}
+#dialogueBox {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+#dialogueCharacter {
+  font-weight: bold;
+  color: #ffd47f;
+}
+#questUpdate {
+  position: absolute;
+  top: 30px;
+  right: 40px;
+  background: rgba(0,0,0,0.6);
+  color: #00ffbf;
+  padding: 10px 20px;
+  border-radius: 20px;
+  display: none;
+  animation: fadeInOut 3s ease forwards;
+}
+.choiceButton {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid #ccc;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+.choiceButton:hover {
+  background: #ffd47f;
+  color: #000;
+}
+#backBtn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: 1px solid #ccc;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+#endingScreen {
+  position: absolute;
+  top: 0;left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  font-size: 1.5em;
+}
+@keyframes fadeInOut {
+  0% {opacity:0;transform:translateY(-20px);}
+  10% {opacity:1;transform:translateY(0);}
+  80% {opacity:1;}
+  100% {opacity:0;transform:translateY(-20px);}
+}

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>雪之聖殿 | Mission – Snow Temple</title>
+<link rel="preload" as="audio" href="sfx/electric.wav">
+<style>
+  :root{
+    --bg:#0e1520; --panel:#111a27; --panel2:#0b1220; --ink:#e7eefb;
+    --muted:#7f91a8; --primary:#78a2ff; --accent:#9ad6ff; --ok:#39d98a;
+    --chip:#1a2536; --shadow:0 10px 40px rgba(0,0,0,.35);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;background:#000;margin:0}
+  body{
+    font-family:ui-rounded, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    color:var(--ink);
+    background:radial-gradient(1200px 900px at 50% 30%, #172234 0%, #0a0f19 65%, #05070d 100%) fixed;
+  }
+
+  /* 背景影片：修正 stacking，保證可見 */
+  .bg{
+    position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none;
+  }
+  .bg video{
+    position:absolute; inset:0;
+    width:100%; height:100%; object-fit:cover; display:block;
+    filter:contrast(1.05) brightness(.92) saturate(1.02);
+  }
+
+  /* Top 快捷 */
+  .topbar{position:fixed;left:18px;right:18px;top:12px;display:flex;gap:12px;align-items:center;z-index:10}
+  .chip{background:var(--chip);color:#cfe1ff;border:1px solid #22314a;border-radius:999px;padding:8px 12px;font-size:13px;display:inline-flex;gap:8px;align-items:center;box-shadow:var(--shadow)}
+  .chip svg{width:16px;height:16px;opacity:.9}
+  .spacer{flex:1}
+
+  /* 情緒條 */
+  .bars{position:fixed;left:18px;top:56px;right:18px;display:flex;gap:36px;z-index:9}
+  .bar{width:360px;max-width:30vw}
+  .bar label{display:block;font-size:12px;color:#b9c8e6;margin:0 0 4px 2px}
+  .meter{height:6px;background:#0d1830;border:1px solid #1e2c47;border-radius:999px;overflow:hidden}
+  .meter span{display:block;height:100%;background:linear-gradient(90deg,#4aa3ff,#9ad6ff);width:10%;transition:width .35s}
+
+  /* 行動 Dock（三選一）— 預設不顯示；最後才置中出現 */
+  #actionsDock{
+    position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    display:none; gap:12px; z-index:11;
+    background:rgba(6,12,22,.55); backdrop-filter:blur(8px);
+    padding:16px; border:1px solid #22314a; border-radius:16px;
+  }
+  #actionsDock .btn{background:#142036;border:1px solid #22314a;color:#d7e6ff;padding:10px 14px;border-radius:14px;font-size:14px;box-shadow:var(--shadow)}
+  #actionsDock .btn:hover{filter:brightness(1.1)}
+  @media (max-width: 720px){
+    #actionsDock{flex-direction:column; align-items:center; width:min(92vw,520px)}
+  }
+
+  /* 道具 BAR（小、不擋對話） */
+  .invBar{position:fixed;left:18px;bottom:160px;width:min(860px,60vw);background:linear-gradient(180deg,#0f1724,#0b121f);border:1px solid #1f2a42;border-radius:20px;padding:12px 14px;box-shadow:var(--shadow);z-index:7}
+  .invBar h5{margin:0 0 6px 2px;font-weight:600;font-size:14px;color:#cfe1ff;display:flex;align-items:center;gap:12px}
+  .owned{font-size:12px;color:#8ea4c6}
+  .invRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .invItem{width:78px;height:56px;border-radius:12px;overflow:hidden;border:1px solid #23344d;background:#0a1221;cursor:pointer;position:relative}
+  .invItem img{width:100%;height:100%;object-fit:cover}
+  .invItem b{position:absolute;right:6px;bottom:4px;background:#0c1c33b0;border:1px solid #2b3f64;border-radius:999px;padding:1px 6px;font-size:11px;color:#d7ecff}
+  .invBtns{margin-left:auto;display:flex;gap:8px}
+  .tiny{font-size:12px;padding:6px 10px;border-radius:999px;background:#142036;border:1px solid #22314a;color:#cfe1ff}
+
+  /* 對話框 */
+  .dialog{position:fixed;left:18px;right:18px;bottom:18px;background:linear-gradient(180deg,#0d1524e6,#0a111ee6);backdrop-filter:blur(8px);border:1px solid #1a2a44;border-radius:22px;padding:18px 22px 18px 22px;display:grid;grid-template-columns:88px 1fr auto;gap:18px;align-items:end;z-index:6}
+  .avatar{width:88px;height:88px;border-radius:16px;overflow:hidden;border:1px solid #273a5a;background:#0a1322}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  .lines{min-height:64px}
+  .who{font-weight:700;font-size:18px;margin:0 0 6px}
+  .line{font-size:18px;color:#e9f2ff;letter-spacing:.5px}
+  .diaBtns{display:flex;gap:10px;align-items:center}
+  .btn{background:#173055;color:#e7f1ff;border:1px solid #27426e;border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;box-shadow:var(--shadow)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  /* 模態：衣櫃、道具庫 */
+  .modal{position:fixed;inset:0;background:rgba(3,8,16,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:20}
+  .modal.show{display:flex}
+  .panel{width:min(1120px,92vw);max-height:80vh;overflow:auto;background:linear-gradient(180deg,#0f1829,#0b1221);border:1px solid #1e2b45;border-radius:22px;box-shadow:var(--shadow);padding:18px}
+  .panel h3{margin:6px 6px 12px;font-size:18px;color:#d9e8ff}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .card{background:linear-gradient(180deg,#0d1626,#0a121f);border:1px solid #22314a;border-radius:18px;padding:12px}
+  .media{width:100%;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#0a1322;border:1px solid #20314b;margin-bottom:10px}
+  .media img,.media video{width:100%;height:100%;object-fit:cover;display:block}
+  .card h4{margin:2px 0 8px;font-size:15px}
+  .muted{color:#9db1cf;font-size:13px;margin:0 0 10px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .close{position:sticky;top:0;float:right;margin-left:auto}
+
+  /* 道具庫（大面板） */
+  .storeGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .storeCard{display:grid;grid-template-columns: 1fr 1fr;gap:14px;background:linear-gradient(180deg,#0f1829,#0b1221);border:1px solid #21324d;border-radius:18px;padding:12px}
+  .storeHero{grid-column:1/3;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;border:1px solid #20314b;background:#0a1322}
+  .storeHero img{width:100%;height:100%;object-fit:cover}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .chipSmall{font-size:12px;padding:4px 8px;border-radius:999px;background:#13223c;border:1px solid #233a61;color:#cfe1ff}
+  .rowR{display:flex;gap:8px;margin-top:auto}
+
+  /* 提示 */
+  .toast{position:fixed;right:18px;bottom:18px;background:#0c1a30;color:#dff2ff;border:1px solid #234168;border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);z-index:50;display:none}
+</style>
+</head>
+<body>
+
+<!-- 背景影片 -->
+<div class="bg">
+  <video id="bgvid" autoplay muted playsinline webkit-playsinline loop preload="auto" poster="img/bg/snow_temple.jpg">
+    <source src="media/snow_temple_loop.webm" type="video/webm">
+    <source src="media/snow_temple_loop.mp4" type="video/mp4">
+  </video>
+</div>
+
+<!-- Top 快捷 -->
+<div class="topbar">
+  <button class="chip" data-jump="home.html">🏠 艾薩克的家</button>
+  <button class="chip" data-jump="school.html">🏫 蘭薩爾小學</button>
+  <button class="chip" data-jump="map_world.html">🗺️ 世界地圖</button>
+  <div class="spacer"></div>
+  <button id="lang" class="chip">中文/EN</button>
+  <button id="bgm" class="chip">BGM：開</button>
+  <button id="wardrobeBtn" class="chip">🧥 換裝 / Wardrobe</button>
+  <button id="storeBtn" class="chip">🧰 道具商店</button>
+</div>
+
+<!-- 情緒條 -->
+<div class="bars">
+  <div class="bar"><label id="lblC">勇氣 Courage</label><div class="meter"><span id="mC" style="width:12%"></span></div></div>
+  <div class="bar"><label id="lblE">同理 Empathy</label><div class="meter"><span id="mE" style="width:8%"></span></div></div>
+  <div class="bar"><label id="lblT">真實 Truth</label><div class="meter"><span id="mT" style="width:5%"></span></div></div>
+</div>
+
+<!-- 行動 Dock（不壓到對話；最後置中出現） -->
+<div id="actionsDock">
+  <button class="btn act" data-goto="treasure">進入聖殿寶藏 / Treasure</button>
+  <button class="btn act" data-goto="leave">離開聖殿 / Leave</button>
+  <button class="btn act" data-goto="search">尋找失蹤孩子 / Search</button>
+</div>
+
+<!-- 道具 BAR（小） -->
+<div class="invBar">
+  <h5>道具 / Inventory <span class="owned">（已擁有 <span id="invCount">0</span> 件）</span></h5>
+  <div class="invRow" id="invRow"></div>
+  <div class="invBtns">
+    <button id="openStore" class="tiny">道具庫 / 商店</button>
+  </div>
+</div>
+
+<!-- 對話 -->
+<div class="dialog" id="dialog">
+  <div class="avatar"><img id="ava" src="img/avatars/heather.png" alt=""></div>
+  <div class="lines">
+    <div class="who" id="who">海瑟</div>
+    <div class="line" id="line">「這裡……就是雪之聖殿？空氣像會發光一樣。」</div>
+  </div>
+  <div class="diaBtns">
+    <button id="next" class="btn">下一句 ▶</button>
+    <button id="auto" class="btn">自動播放</button>
+  </div>
+</div>
+
+<!-- 衣櫃 Modal -->
+<div id="wardrobe" class="modal">
+  <div class="panel">
+    <button class="btn close" data-close="#wardrobe">關閉</button>
+    <h3>換裝 / Wardrobe</h3>
+    <div class="grid" id="wardrobeGrid"></div>
+    <p class="muted">（現為占位系統；之後可接角色 2D/3D 外觀與屬性加成）</p>
+  </div>
+</div>
+
+<!-- 道具庫 Modal -->
+<div id="store" class="modal" data-store-url="store.html">
+  <div class="panel">
+    <div style="display:flex;gap:10px;align-items:center">
+      <h3 style="margin-right:auto">道具欄 / Store & Library</h3>
+      <a id="goStoreFull" class="btn" target="_blank">前往道具商店（完整頁）</a>
+      <button class="btn close" data-close="#store">關閉</button>
+    </div>
+    <div class="storeGrid" id="storeGrid"></div>
+  </div>
+</div>
+
+<audio id="sfx" src="sfx/electric.wav" preload="auto"></audio>
+<audio id="bgma" src="audio/snow_temple_theme.mp3" loop></audio>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ---------- 音效/BGM ---------- */
+const SFX = document.getElementById('sfx');
+const BGM = document.getElementById('bgma');
+const toast = (t)=>{const n=document.getElementById('toast');n.textContent=t;n.style.display='block';setTimeout(()=>n.style.display='none',1400);}
+const playSfx = ()=>{ try{ SFX.currentTime=0; SFX.play(); }catch{} }
+
+/* ---------- 你的原本 state（劇情/清單）保留 ---------- */
+const state = {
+  lang:'zh',
+  auto:false,
+  stats:{ C:12, E:8, T:5 },
+  inv:[
+    { id:'magic_fruit',   name:'魔法果子 / Magic Fruit', img:'img/items/magic_fruit.jpg', have:0, eff:{E:+2}, desc:'情緒補給。每一顆象徵希望、勇氣、穩定，治癒，能在被時間夾傷口光。' },
+    { id:'comfort_food',  name:'瑪琳絲太太的料理 / Comfort Food', img:'img/items/comfort_food.jpg', have:0, eff:{C:+1,E:+1}, desc:'家的溫度，暖胃暖心，讓隊伍恢復體力與信心。' },
+    { id:'time_book',     name:'時間祕境 / Time Book', img:'img/items/time_book.jpg', have:0, eff:{T:+2}, desc:'學會打開不同時空的門。閱讀即是穿越。' },
+    { id:'wolf_whistle',  name:'雪狼哨 / Wolf Whistle', img:'img/items/wolf_whistle.jpg', have:0, eff:{E:+1}, desc:'召喚夥伴支援；危急時刻能引來夥伴的回應。' },
+    { id:'time_hourglass',name:'時間沙漏 / Time Hourglass', img:'img/items/time_hourglass.jpg', have:0, eff:{C:+1}, desc:'釋放心中空檔，讓思緒不再主導決定。' }
+  ],
+  wardrobe:[
+    { id:'explorer_coat', title:'探險者外套 Explorer Coat', eff:{C:+1} },
+    { id:'snow_cloak',    title:'雪地披風 Snow Cloak',     eff:{E:+1} },
+    { id:'seer_robe',     title:'觀星者長袍 Seer Robe',    eff:{T:+1} },
+  ],
+  script: [
+    { n:'海瑟', a:'img/avatars/heather.png', t:'「這裡……就是雪之聖殿？空氣像會發光一樣。」' },
+    { n:'迪恩', a:'img/avatars/dean.png',    t:'「小心腳下，這種地形很容易滑倒。里特，別離太遠！」' },
+    { n:'艾薩克', a:'img/avatars/isaac.png',  t:'「等等……你們有聽到嗎？像是…鐘聲在雪裡迴盪。」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「你們終於來了。孩子們，歡迎回到『雅索家族的殿堂』。」' },
+    { n:'海瑟', a:'img/avatars/heather.png', t:'「妳是……菲亞的母親？」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「我是她記憶的影子，也是這片雪的守門人。」' },
+    { n:'艾薩克', a:'img/avatars/isaac.png', t:'「記憶的……影子？」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「在真實與夢的邊界，影子比記憶更誠實。」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「我在此守望很久，為等你們帶回失落的勇氣與真實。」' },
+    { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「在你們面前有三條路—選擇，即是代價。」', stop:true }
+  ],
+  branches:{
+    treasure:[
+      { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「寶藏不是金銀，而是會映照心意的『記憶之核』。」' },
+      { n:'艾薩克', a:'img/avatars/isaac.png', t:'「如果能見到他最後一次……我想知道他是否還活著。」' },
+      { n:'系統', a:'', t:'取得道具：記憶之核', act:()=>{ addInv('time_book'); } },
+      { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「準備好了就跟我來吧。」（將前往：記憶之核·回收任務）', link:'mission_core.html' }
+    ],
+    leave:[
+      { n:'迪恩', a:'img/avatars/dean.png', t:'「現在撤離並不是失敗，是為了更好的回來。」' },
+      { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「道路自會等待你們。帶著清醒離開，也是勇氣。」', link:'map_world.html' }
+    ],
+    search:[
+      { n:'海瑟', a:'img/avatars/heather.png', t:'「我聽見小小的腳印聲……在柱廊後面！」' },
+      { n:'雅索妮娜', a:'img/avatars/yasonina.png', t:'「跟著銀光走，別回頭。」' },
+      { n:'系統', a:'', t:'目標更新：搜尋失蹤孩子（區域：北側側廊）', link:'mission_search.html' }
+    ]
+  }
+};
+
+/* ---------- 影片保險機制（iOS/瀏覽器阻擋時啟動） ---------- */
+const bgvid = document.getElementById('bgvid');
+async function ensureBGVideo(){
+  // 若來源都掛了則顯示 poster（路徑錯誤偵測）
+  const sources = [...bgvid.querySelectorAll('source')].map(s=>s.src);
+  let ok=false;
+  for(const url of sources){
+    try{
+      const r = await fetch(url, { method:'HEAD' });
+      if(r.ok){ ok=true; break; }
+    }catch{}
+  }
+  if(!ok){
+    console.warn('Background video sources not reachable, fallback to poster');
+    return; // poster 會自動顯示
+  }
+  try{
+    await bgvid.play();
+  }catch(e){
+    // 等使用者第一次互動後再播放
+    const kick = async ()=>{
+      try{ await bgvid.play(); }catch{}
+      window.removeEventListener('pointerdown', kick, {once:true});
+      window.removeEventListener('keydown', kick, {once:true});
+    };
+    window.addEventListener('pointerdown', kick, {once:true});
+    window.addEventListener('keydown', kick, {once:true});
+  }
+}
+
+/* ---------- 基礎 UI 綁定（你的原始流程保留） ---------- */
+const lblC=document.getElementById('mC'), lblE=document.getElementById('mE'), lblT=document.getElementById('mT');
+const invRow=document.getElementById('invRow'); const invCount=document.getElementById('invCount');
+const wardrobeGrid=document.getElementById('wardrobeGrid'); const storeGrid=document.getElementById('storeGrid');
+
+function clamp(n){return Math.max(0,Math.min(100,n))}
+function syncBars(){
+  lblC.style.width = clamp(state.stats.C) + '%';
+  lblE.style.width = clamp(state.stats.E) + '%';
+  lblT.style.width = clamp(state.stats.T) + '%';
+}
+function addInv(id, amt=1){
+  const it=state.inv.find(i=>i.id===id); if(!it) return;
+  it.have = (it.have||0)+amt; renderInvBar(); toast('獲得：'+it.name+' ×'+amt)
+}
+function renderInvBar(){
+  invRow.innerHTML = '';
+  let cnt=0;
+  state.inv.forEach(it=>{
+    cnt += (it.have||0)>0?1:0;
+    const el=document.createElement('div'); el.className='invItem'; el.title=it.name;
+    el.innerHTML=`<img src="${it.img}" alt=""><b>${it.have||0}</b>`;
+    el.addEventListener('click',()=>{ playSfx(); openStoreModal(it.id); });
+    invRow.appendChild(el);
+  });
+  invCount.textContent = cnt;
+}
+function applyEff(eff){
+  if(!eff) return;
+  state.stats.C += eff.C||0;
+  state.stats.E += eff.E||0;
+  state.stats.T += eff.T||0;
+  syncBars();
+}
+
+/* ---------- 對話播放（最後才顯示三選一，置中） ---------- */
+let idx=0; const who=document.getElementById('who'), line=document.getElementById('line'), ava=document.getElementById('ava');
+function showLine(o){
+  who.textContent=o.n; line.textContent=o.t; if(o.a) ava.src=o.a;
+  if(o.stop){
+    // 最後一行才顯示，置中登場
+    setTimeout(()=>{ document.getElementById('actionsDock').style.display='flex'; }, 800);
+  }
+}
+function nextLine(){
+  playSfx();
+  const list=state.script;
+  if(idx < list.length){ const o=list[idx++]; showLine(o); }
+}
+document.getElementById('next').onclick=()=>{ nextLine(); }
+document.getElementById('auto').onclick=()=>{ state.auto=!state.auto; playSfx(); if(state.auto) autoplay(); }
+function autoplay(){ if(!state.auto) return; nextLine(); setTimeout(()=>autoplay(), 2300); }
+
+/* ---------- 三分支 ---------- */
+document.querySelectorAll('#actionsDock .act').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    playSfx();
+    document.getElementById('actionsDock').style.display='none';
+    const key=b.dataset.goto, seq=state.branches[key]||[];
+    let i=0;
+    const tick=()=>{
+      if(i>=seq.length) return;
+      const o=seq[i++]; showLine(o);
+      if(o.act) o.act();
+      if(o.link){
+        setTimeout(()=>{ window.location.href=o.link; }, 900);
+      }else setTimeout(tick, 1200);
+    };
+    tick();
+  });
+});
+
+/* ---------- 衣櫃（影片優先） ---------- */
+async function buildWardrobe(){
+  wardrobeGrid.innerHTML='';
+  for(const w of state.wardrobe){
+    const card=document.createElement('div'); card.className='card';
+    const media=document.createElement('div'); media.className='media';
+    const mp4 = `assets/wardrobe/${w.id}.mp4`;
+    const jpg = `assets/wardrobe/${w.id}.jpg`;
+    let hasVideo=false;
+    try{
+      const r = await fetch(mp4,{method:'HEAD'}); hasVideo = r.ok;
+    }catch{}
+    if(hasVideo){
+      media.innerHTML = `<video src="${mp4}" autoplay loop muted playsinline webkit-playsinline></video>`;
+    }else{
+      media.innerHTML = `<img src="${jpg}" alt="">`;
+    }
+    const h4=document.createElement('h4'); h4.textContent=w.title;
+    const p=document.createElement('p'); p.className='muted';
+    p.textContent = `效果 / Effect：${w.eff.C?`勇氣 +${w.eff.C} `:''}${w.eff.E?`同理 +${w.eff.E} `:''}${w.eff.T?`真實 +${w.eff.T} `:''}`.trim();
+    const row=document.createElement('div'); row.className='row';
+    const wear=document.createElement('button'); wear.className='btn'; wear.textContent='穿上 / Equip';
+    wear.onclick=()=>{ playSfx(); applyEff(w.eff); toast('已穿上：'+w.title); }
+    row.appendChild(wear);
+    card.append(media,h4,p,row);
+    wardrobeGrid.appendChild(card);
+  }
+}
+
+/* ---------- 道具庫（面板） + 商店導流 ---------- */
+function openStoreModal(focusId){
+  playSfx();
+  const modal=document.getElementById('store'); modal.classList.add('show');
+  const full = modal.dataset.storeUrl || 'store.html';
+  document.getElementById('goStoreFull').href = full + '?from=mission_snow_temple';
+  storeGrid.innerHTML='';
+  state.inv.forEach(it=>{
+    const card=document.createElement('div'); card.className='storeCard';
+    card.innerHTML = `
+      <div class="storeHero"><img src="${it.img}" alt=""></div>
+      <div>
+        <h4 style="margin:6px 0">${it.name} <span class="muted">持有 x${it.have||0}</span></h4>
+        <p class="muted">${it.desc||''}</p>
+        <div class="chips">
+          ${it.eff?.C?`<span class="chipSmall">勇氣 +${it.eff.C}</span>`:''}
+          ${it.eff?.E?`<span class="chipSmall">同理 +${it.eff.E}</span>`:''}
+          ${it.eff?.T?`<span class="chipSmall">真實 +${it.eff.T}</span>`:''}
+        </div>
+        <div class="rowR">
+          <button class="btn useBtn">使用 / Use</button>
+          <button class="btn">概述</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end;justify-content:flex-end">
+        <a class="btn" target="_blank" href="${(document.getElementById('store').dataset.storeUrl||'store.html')}?buy=${it.id}">前往購買</a>
+      </div>
+    `;
+    card.querySelector('.useBtn').onclick=()=>{
+      playSfx();
+      if((it.have||0)<=0){ toast('沒有存貨，請先到商店購買'); return; }
+      it.have--; renderInvBar(); applyEff(it.eff); toast('已使用：'+it.name);
+    };
+    storeGrid.appendChild(card);
+  });
+}
+document.getElementById('openStore').onclick=()=>openStoreModal();
+
+/* ---------- 事件繫結 ---------- */
+document.getElementById('wardrobeBtn').onclick=()=>{ buildWardrobe().then(()=>{ document.getElementById('wardrobe').classList.add('show'); playSfx(); }); };
+document.getElementById('storeBtn').onclick=()=>openStoreModal();
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>{ playSfx(); document.querySelector(b.getAttribute('data-close')).classList.remove('show'); }));
+document.querySelectorAll('.chip, .btn').forEach(b=>b.addEventListener('mousedown',playSfx));
+document.querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>{ const to=b.dataset.jump; if(to) window.location.href=to; }));
+document.getElementById('bgm').onclick=()=>{
+  playSfx();
+  if(BGM.paused){ BGM.volume=.6; BGM.play(); document.getElementById('bgm').textContent='BGM：開'; }
+  else{ BGM.pause(); document.getElementById('bgm').textContent='BGM：關'; }
+};
+
+/* ---------- 啟動 ---------- */
+syncBars();
+renderInvBar();
+nextLine(); // 顯示第一句
+ensureBGVideo(); // ← 確保背景影片可播放（含互動解鎖）
+
+try{ BGM.volume=.6; BGM.play(); document.getElementById('bgm').textContent='BGM：開'; }catch{}
+</script>
+</body>
+</html>

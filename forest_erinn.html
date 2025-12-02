@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>雪狼男孩｜穆高爾森林・艾琳初登場</title>
+
+<!-- 資源對照表
+video/forest_erinn.mp4       ← 森林背景影片（30–60 秒，不循環）
+img/forest_poster.jpg        ← 載入前海報
+img/avatars/erinn.png        ← 艾琳 512x512 透明
+img/avatars/heather.png      ← 海瑟
+img/avatars/dean.png         ← 迪恩
+img/avatars/isaac.png        ← 艾薩克
+audio/bgm_forest_erinn.mp3   ← Suno生成「史詩森林夢境」版BGM
+-->
+
+<style>
+:root{
+  --c-primary:#8bd3ff;
+  --c-accent:#4fd5ff;
+  --c-text:#e7f1ff;
+  --c-sub:#b9d2ea;
+  --blur:8px;
+}
+html,body{
+  margin:0;height:100%;overflow:hidden;
+  background:#000;font-family:"Noto Sans TC",system-ui;
+}
+
+/* 背景 */
+#poster{position:absolute;inset:0;background:url("img/forest_poster.jpg") center/cover no-repeat;z-index:0;opacity:1;transition:opacity .8s ease;}
+#bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.88) contrast(1.05);opacity:0;transition:opacity .8s ease;z-index:0;}
+
+/* 粒子層 */
+canvas#particles,canvas#snow{position:absolute;inset:0;z-index:1;pointer-events:none;}
+
+/* 標題 */
+.chapter{
+  position:absolute;top:24px;left:50%;transform:translateX(-50%);
+  color:var(--c-text);letter-spacing:.18em;font-weight:600;z-index:5;
+  text-shadow:0 0 24px #0009,0 0 32px #0009;
+}
+
+/* 對話框 */
+.dialog{
+  position:absolute;left:50%;bottom:40px;transform:translateX(-50%);
+  width:min(980px,92vw);z-index:5;display:grid;grid-template-columns:96px 1fr;
+  gap:18px;align-items:end;backdrop-filter:blur(var(--blur));
+  background:linear-gradient(180deg,#0a1222aa,#03060c99);
+  border:1px solid #6fbaf833;border-radius:16px;padding:16px 18px;
+  box-shadow:0 0 36px #061427aa,inset 0 0 0 1px #8bd3ff22;
+}
+.avatar{width:96px;height:96px;border-radius:12px;background:#0a1222 center/contain no-repeat;border:1px solid #8bd3ff55;box-shadow:0 0 24px #2ec7ff33;}
+.bubble{color:var(--c-text);line-height:1.6;}
+.name{font-weight:800;letter-spacing:.12em;margin-bottom:6px;color:#cfe9ff}
+.content{color:var(--c-sub);font-size:1.05rem}
+.ctl{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  background:linear-gradient(90deg,#1e6aff,#4fd5ff);color:#fff;border:none;border-radius:10px;
+  padding:10px 16px;font-size:.98rem;letter-spacing:.06em;cursor:pointer;
+  box-shadow:0 0 16px #4fb4ff66;transition:.25s ease;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 0 24px #8bd3ffaa;}
+.btn.secondary{background:#0b1630cc;border:1px solid #8bd3ff55;box-shadow:none;color:#cfe9ff}
+.btn.ghost{background:transparent;border:1px solid #8bd3ff33;color:#b9d2ea}
+
+/* 選項 */
+.choices{
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(40px + 180px);
+  display:none;z-index:8;gap:12px;flex-direction:column;width:min(760px,92vw);
+}
+.choice{
+  background:#0a1222cc;border:1px solid #8bd3ff55;border-radius:12px;padding:14px 16px;
+  color:#d7eaff;cursor:pointer;transition:.2s;backdrop-filter:blur(6px)
+}
+.choice:hover{border-color:#9fe0ff;box-shadow:0 0 18px #3ec7ff55;transform:translateY(-2px)}
+@media(max-width:900px){.choices{bottom:calc(40px + 220px)}}
+</style>
+</head>
+<body>
+
+<div id="poster"></div>
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="video/forest_erinn.mp4" type="video/mp4">
+</video>
+
+<canvas id="particles"></canvas>
+<canvas id="snow"></canvas>
+
+<div class="chapter">CHAPTER II — 穆高爾森林 / The Mogol Woods</div>
+
+<!-- 對話 -->
+<div class="dialog" id="dialog">
+  <div class="avatar" id="avatar"></div>
+  <div class="bubble">
+    <div class="name" id="name">—</div>
+    <div class="content" id="text">…</div>
+    <div class="ctl">
+      <button class="btn" id="btnNext">下一句 ▷</button>
+      <button class="btn secondary" id="btnAuto">自動播放</button>
+    </div>
+  </div>
+</div>
+
+<!-- 選項 -->
+<div class="choices" id="choices"></div>
+
+<script>
+/* === 背景影片 === */
+const video=document.getElementById('bgVideo');
+const poster=document.getElementById('poster');
+video.addEventListener('loadeddata',()=>{video.style.opacity=1;poster.style.opacity=0;});
+video.addEventListener('ended',()=>video.pause());
+video.addEventListener('error',()=>{poster.style.opacity=1;});
+
+/* === 背景音樂 === */
+const bgm=new Audio('audio/bgm_forest_erinn.mp3');
+bgm.loop=true; bgm.volume=0.6;
+document.addEventListener('pointerdown',()=>bgm.play().catch(()=>{}),{once:true});
+
+/* === 粒子 + 飄雪 === */
+const cp=document.getElementById('particles'),pctx=cp.getContext('2d');
+const cs=document.getElementById('snow'),sctx=cs.getContext('2d');
+let W,H;function resize(){W=cp.width=cs.width=innerWidth;H=cp.height=cs.height=innerHeight;}
+addEventListener('resize',resize);resize();
+const particles=Array.from({length:100},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+0.6,s:Math.random()*0.3+0.2,a:Math.random()*Math.PI*2}));
+const flakes=Array.from({length:150},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+0.5,s:Math.random()*0.5+0.25,w:Math.random()*0.8+0.2}));
+(function loop(){
+  pctx.clearRect(0,0,W,H);
+  pctx.fillStyle='rgba(150,220,255,.6)';
+  particles.forEach(pt=>{
+    pt.a+=0.002;pt.y+=pt.s;pt.x+=Math.sin(pt.a)*0.2;
+    if(pt.y>H){pt.y=-5;pt.x=Math.random()*W;}
+    pctx.beginPath();pctx.arc(pt.x,pt.y,pt.r,0,Math.PI*2);pctx.fill();
+  });
+  sctx.clearRect(0,0,W,H);
+  sctx.fillStyle='rgba(255,255,255,.9)';
+  flakes.forEach(f=>{
+    f.y+=f.s;f.x+=Math.sin((f.y+f.x)*0.003)*f.w;
+    if(f.y>H+6){f.y=-6;f.x=Math.random()*W;}
+    sctx.beginPath();sctx.arc(f.x,f.y,f.r,0,Math.PI*2);sctx.fill();
+  });
+  requestAnimationFrame(loop);
+})();
+
+/* === 對話劇本 === */
+const $name=document.getElementById('name');
+const $text=document.getElementById('text');
+const $avatar=document.getElementById('avatar');
+const $next=document.getElementById('btnNext');
+const $auto=document.getElementById('btnAuto');
+const $choices=document.getElementById('choices');
+let autoTimer=null;
+
+const script=[
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「這裡的森林，好像會呼吸一樣……」'},
+  {n:'迪恩',a:'img/avatars/dean.png',t:'「樹根裡有能量流動，小心別踩斷它。」'},
+  {n:'艾薩克',a:'img/avatars/isaac.png',t:'「光從霧裡透出來……那是什麼？」'},
+  {n:'艾琳',a:'img/avatars/erinn.png',t:'「別害怕，我是這片森林的守護者——艾琳。」'},
+  {n:'海瑟',a:'img/avatars/heather.png',t:'「守護者？我們沒有惡意，只是在找一個孩子。」'},
+  {n:'艾琳',a:'img/avatars/erinn.png',t:'「我知道。這片林子會回應純真的心。」'},
+  {n:'艾琳',a:'img/avatars/erinn.png',t:'「前方有三條路，你們必須選擇——」',choice:[
+    {label:'跟隨艾琳深入森林',goto:'follow'},
+    {label:'協助採集藥草',goto:'herb'},
+    {label:'返回營地報告',goto:'camp'}
+  ]}
+];
+
+const branches={
+  follow:[
+    {n:'艾琳',a:'img/avatars/erinn.png',t:'「跟著我，月光會指引我們到達狼群的巢穴。」',end:'mission_forest_path.html'}
+  ],
+  herb:[
+    {n:'艾薩克',a:'img/avatars/isaac.png',t:'「這些藥草……是治癒之花？」'},
+    {n:'艾琳',a:'img/avatars/erinn.png',t:'「對，它們能喚醒沉睡的記憶。」',end:'mission_herb_gather.html'}
+  ],
+  camp:[
+    {n:'迪恩',a:'img/avatars/dean.png',t:'「我們先回去準備，等明天再來。」',end:'mission_camp_return.html'}
+  ]
+};
+
+let idx=0,active=script;
+function render(line){
+  if(!line)return;
+  $name.textContent=line.n||' ';
+  $text.textContent=line.t||' ';
+  $avatar.style.backgroundImage=line.a?`url(${line.a})`:'none';
+  if(line.choice){showChoices(line.choice);}else{$choices.style.display='none';}
+  if(line.end){
+    $next.textContent='前往任務 ▷';
+    $next.onclick=()=>fadeTo(line.end);
+  }else{
+    $next.textContent='下一句 ▷';
+    $next.onclick=next;
+  }
+}
+function next(){idx++;if(idx>=active.length){idx=active.length-1;return;}render(active[idx]);}
+function showChoices(list){
+  $choices.innerHTML='';
+  list.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='choice';div.textContent=c.label;
+    div.onclick=()=>{
+      active=branches[c.goto]||active;
+      idx=-1;$choices.style.display='none';next();
+    };
+    $choices.appendChild(div);
+  });
+  $choices.style.display='flex';
+}
+const $autoBtn=document.getElementById('btnAuto');
+$autoBtn.onclick=()=>{
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;$autoBtn.textContent='自動播放';return;}
+  $autoBtn.textContent='自動中…';
+  autoTimer=setInterval(()=>{
+    if($choices.style.display==='flex')return;
+    next();
+    if(idx===active.length-1&&!active[idx].end){clearInterval(autoTimer);$autoBtn.textContent='自動播放';}
+  },2600);
+};
+function fadeTo(url){
+  document.body.style.transition='800ms ease';
+  document.body.style.opacity='0';
+  setTimeout(()=>location.href=url,820);
+}
+render(active[0]);
+</script>
+</body>
+</html>
